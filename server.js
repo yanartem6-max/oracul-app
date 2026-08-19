@@ -22,6 +22,8 @@ const ALLOWED_ORIGINS = [
   'https://twa.dev',
   'http://localhost:3000',  // Только для разработки
   'http://localhost:3001',
+  'https://oracul.vercel.app',  // Ваш Vercel домен
+  'https://oracul-6whab8ijd-cqccqeq-8l09s-projects.vercel.app',  // Preview deployments
   process.env.ALLOWED_ORIGINS_CUSTOM || '',
 ].filter(Boolean);
 
@@ -56,11 +58,15 @@ app.use((req, res, next) => {
 
   // ─── CORS проверка ───────────────────────────────────────────────────────────
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  
+  // Разрешаем запросы без origin (same-origin requests)
+  if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (req.method !== 'OPTIONS') {
+  } else {
     // Логируем подозрительные запросы
-    console.warn(`[SECURITY] Rejected request from origin: ${origin || 'no-origin'}`);
+    console.warn(`[SECURITY] Rejected request from origin: ${origin}`);
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
