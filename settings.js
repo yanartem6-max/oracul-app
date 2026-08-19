@@ -118,6 +118,8 @@ const TRANSLATIONS = {
     error: 'Ошибка',
     // Темы
     theme_light: 'Светлая', theme_dark: 'Тёмная', theme_auto: 'Авто',
+    ton_enter_address: 'Введи адрес TON кошелька:\n(формат: UQ... или EQ...)',
+    confirm_action: 'Подтвердите действие',
   },
   en: {
     nav_catalog: 'Catalog', nav_swap: 'Swap', nav_copy: 'Copy',
@@ -224,6 +226,8 @@ const TRANSLATIONS = {
     ai_greeting_end: 'Ask me about any coin or strategy 🚀',
     error: 'Error',
     theme_light: 'Light', theme_dark: 'Dark', theme_auto: 'Auto',
+    ton_enter_address: 'Enter TON wallet address:\n(format: UQ... or EQ...)',
+    confirm_action: 'Confirm action',
   },
   zh: {
     nav_catalog: '市场', nav_swap: '兑换', nav_copy: '跟单',
@@ -330,6 +334,8 @@ const TRANSLATIONS = {
     ai_greeting_end: '问我任何关于代币或策略的问题 🚀',
     error: '错误',
     theme_light: '浅色', theme_dark: '深色', theme_auto: '自动',
+    ton_enter_address: '输入 TON 钱包地址：\n(格式：UQ... 或 EQ...)',
+    confirm_action: '确认操作',
   },
   es: {
     nav_catalog: 'Catálogo', nav_swap: 'Swap', nav_copy: 'Copiar',
@@ -436,6 +442,8 @@ const TRANSLATIONS = {
     ai_greeting_end: 'Pregúntame sobre cualquier moneda o estrategia 🚀',
     error: 'Error',
     theme_light: 'Claro', theme_dark: 'Oscuro', theme_auto: 'Auto',
+    ton_enter_address: 'Ingresa la dirección de tu billetera TON:\n(formato: UQ... o EQ...)',
+    confirm_action: 'Confirmar acción',
   },
 };
 

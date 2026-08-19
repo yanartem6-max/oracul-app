@@ -282,7 +282,7 @@ async function disconnectPhantom() {
 
 async function connectTON() {
   // TON подключается только через ввод адреса
-  const addr = prompt('Введи адрес TON кошелька:\n(формат: UQ... или EQ...)');
+  const addr = prompt(t('ton_enter_address'));
   
   if (!addr || addr.trim().length === 0) {
     console.log('[TON] отмена');
