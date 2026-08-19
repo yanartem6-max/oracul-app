@@ -1,5 +1,6 @@
 // wallet.js — TON Connect (Tonkeeper + другие TON кошельки)
 import { t, onSettingsChange } from './settings.js?v=5';
+import { loadTonConnectUI } from './tonconnect-loader.js';
 
 let tonConnectUI = null;
 let connectedWallet = null; // { type: 'ton', address, balance }
@@ -37,21 +38,17 @@ function loadWalletFromStorage() {
 async function initTonConnect() {
   if (tonConnectUI) return tonConnectUI;
 
-  // Проверяем что TON Connect UI загружен из CDN
-  let retries = 0;
-  while (!window.TonConnectUI && retries < 100) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    retries++;
-  }
-
-  if (!window.TonConnectUI) {
-    console.error('[TON Connect] TonConnectUI not loaded from CDN');
-    alert('Ошибка загрузки TON Connect. Обновите страницу.');
-    return null;
-  }
-
   try {
-    tonConnectUI = new window.TonConnectUI({
+    // Загружаем TON Connect UI через loader
+    const TonConnectUI = await loadTonConnectUI();
+    
+    if (!TonConnectUI) {
+      console.error('[TON Connect] TonConnectUI not loaded from CDN');
+      alert('Ошибка загрузки TON Connect. Обновите страницу.');
+      return null;
+    }
+
+    tonConnectUI = new TonConnectUI({
       manifestUrl: 'https://oracul.vercel.app/tonconnect-manifest.json',
       buttonRootId: null, // не используем встроенную кнопку
     });
@@ -85,6 +82,7 @@ async function initTonConnect() {
     return tonConnectUI;
   } catch (e) {
     console.error('[TON Connect] ошибка инициализации:', e);
+    alert('Ошибка инициализации TON Connect: ' + e.message);
     return null;
   }
 }
