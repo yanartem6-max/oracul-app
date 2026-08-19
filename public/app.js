@@ -4,11 +4,6 @@ import { initWalletUI } from './wallet.js?v=16';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
 import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=16';
-import { renderWatchlistPage } from './watchlist.js';
-import { renderPortfolioPage } from './portfolio.js';
-import { renderSmartWalletsCard } from './smart-wallets.js';
-import { renderReferralPage } from './referral.js';
-import { renderSybilAnalysis } from './sybil-detection.js';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
@@ -57,10 +52,18 @@ function showPage(pageId) {
   navBtns.forEach(b => b.classList.remove('active'));
   document.getElementById(pageId)?.classList.add('active');
   document.querySelector(`.nav-btn[data-page="${pageId}"]`)?.classList.add('active');
+  
   if (pageId === 'pageSettings') renderSettings();
-  if (pageId === 'pageWatchlist') renderWatchlistPage();
-  if (pageId === 'pagePortfolio') renderPortfolioPage();
-  if (pageId === 'pageReferral') renderReferralPage();
+  
+  if (pageId === 'pageWatchlist') {
+    import('./watchlist.js').then(m => m.renderWatchlistPage());
+  }
+  if (pageId === 'pagePortfolio') {
+    import('./portfolio.js').then(m => m.renderPortfolioPage());
+  }
+  if (pageId === 'pageReferral') {
+    import('./referral.js').then(m => m.renderReferralPage());
+  }
 }
 
 navBtns.forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
@@ -126,23 +129,52 @@ function openCoinModal(pair) {
   coinModal.classList.add('open');
   setTimeout(() => initChart(pair), 350);
 
-  // Загружаем Smart Wallets анализ асинхронно
+  // Загружаем анализы асинхронно
   setTimeout(async () => {
-    const container = coinModalContent.querySelector('#smartWalletsContainer');
-    if (container) {
-      const walletsHtml = await renderSmartWalletsCard(pair);
-      container.innerHTML = walletsHtml;
-      container.style.display = 'block';
-    }
+    try {
+      // Risk Score
+      const { renderRiskScore } = await import('./risk-analyzer.js');
+      const riskHtml = renderRiskScore(pair);
+      
+      // AI Buttons
+      const { renderAIAdvisorButtons } = await import('./ai-advisor.js');
+      const aiHtml = renderAIAdvisorButtons(pair);
+      
+      // Watchlist Button
+      const { renderWatchlistButton } = await import('./watchlist.js');
+      const watchlistHtml = renderWatchlistButton(pair);
+      
+      const analysisContainer = coinModalContent.querySelector('#analysisContainer');
+      if (analysisContainer) {
+        analysisContainer.innerHTML = riskHtml + aiHtml;
+      }
+      
+      const watchlistContainer = coinModalContent.querySelector('#watchlistBtnContainer');
+      if (watchlistContainer) {
+        watchlistContainer.innerHTML = watchlistHtml;
+      }
 
-    // Загружаем Sybil анализ
-    const sybilContainer = coinModalContent.querySelector('#sybilDetectionContainer');
-    if (sybilContainer) {
-      const sybilHtml = await renderSybilAnalysis(pair);
-      sybilContainer.innerHTML = sybilHtml;
-      sybilContainer.style.display = 'block';
+      // Smart Wallets (если контейнер есть)
+      const smartContainer = coinModalContent.querySelector('#smartWalletsContainer');
+      if (smartContainer) {
+        const { renderSmartWalletsCard } = await import('./smart-wallets.js');
+        const walletsHtml = await renderSmartWalletsCard(pair);
+        smartContainer.innerHTML = walletsHtml;
+        smartContainer.style.display = 'block';
+      }
+
+      // Sybil Detection
+      const sybilContainer = coinModalContent.querySelector('#sybilDetectionContainer');
+      if (sybilContainer) {
+        const { renderSybilAnalysis } = await import('./sybil-detection.js');
+        const sybilHtml = await renderSybilAnalysis(pair);
+        sybilContainer.innerHTML = sybilHtml;
+        sybilContainer.style.display = 'block';
+      }
+    } catch (e) {
+      console.error('[Modal] Error loading analysis:', e);
     }
-  }, 500);
+  }, 600);
 
   coinModalContent.querySelector('#modalBuyBtn')?.addEventListener('click', () => {
     closeCoinModal();

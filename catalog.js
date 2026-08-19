@@ -1,10 +1,5 @@
 // catalog.js — каталог мем-коинов с лого и графиками
 import { fmtPrice, t, onSettingsChange } from './settings.js?v=15';
-import { renderRiskScore } from './risk-analyzer.js';
-import { renderWatchlistButton } from './watchlist.js';
-import { renderSmartWalletsCard } from './smart-wallets.js';
-import { renderAIAdvisorButtons } from './ai-advisor.js';
-import { renderSybilAnalysis } from './sybil-detection.js';
 
 export let currentCoin = null;
 
@@ -339,13 +334,8 @@ export function renderCoinModal(pair) {
       <div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">${t('loading') || '⏳'}</div>
     </div>
 
-    ${renderRiskScore(pair)}
-
-    ${renderAIAdvisorButtons(pair)}
-
-    <div id="smartWalletsContainer" style="display:none"></div>
-
-    <div id="sybilDetectionContainer" style="display:none"></div>
+    <!-- Анализы загружаются асинхронно -->
+    <div id="analysisContainer"></div>
 
     <div class="modal-stat-grid">
       <div class="modal-stat">
@@ -378,7 +368,7 @@ export function renderCoinModal(pair) {
 
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="primary-btn" id="modalBuyBtn" style="flex:1">${t('modal_buy')} ${symbol}</button>
-      ${renderWatchlistButton(pair)}
+      <div id="watchlistBtnContainer"></div>
     </div>
     ${pair.url ? `<a href="${pair.url}" target="_blank"
       style="display:block;text-align:center;font-size:13px;color:var(--orange-600);padding:4px 0">
