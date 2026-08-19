@@ -61,28 +61,32 @@ async function initTonConnect() {
     // Слушаем изменения статуса подключения
     tonConnectUI.onStatusChange((wallet) => {
       if (wallet) {
-      const address = wallet.account.address;
-      connectedWallet = {
-        type: 'ton',
-        address: address,
-        balance: 0,
-      };
-      saveWalletToStorage();
-      console.log('[TON Connect] подключён:', address);
-      
-      // Обновляем UI
-      updateWalletUI();
-      fetchTonBalance(address);
-    } else {
-      console.log('[TON Connect] отключён');
-      connectedWallet = null;
-      tonBalance = 0;
-      saveWalletToStorage();
-      updateWalletUI();
-    }
-  });
+        const address = wallet.account.address;
+        connectedWallet = {
+          type: 'ton',
+          address: address,
+          balance: 0,
+        };
+        saveWalletToStorage();
+        console.log('[TON Connect] подключён:', address);
+        
+        // Обновляем UI
+        updateWalletUI();
+        fetchTonBalance(address);
+      } else {
+        console.log('[TON Connect] отключён');
+        connectedWallet = null;
+        tonBalance = 0;
+        saveWalletToStorage();
+        updateWalletUI();
+      }
+    });
 
-  return tonConnectUI;
+    return tonConnectUI;
+  } catch (e) {
+    console.error('[TON Connect] ошибка инициализации:', e);
+    return null;
+  }
 }
 
 // ─── БАЛАНС TON ───────────────────────────────────────────────────────────────
