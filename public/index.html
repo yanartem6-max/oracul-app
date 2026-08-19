@@ -124,32 +124,6 @@
         </div>
       </div>
 
-      <!-- ── COPY-TRADING ──────────────────────────────────────────────── -->
-      <div class="page" id="pageCopy">
-        <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <h2 data-i18n="copy_title">Copy-Trading</h2>
-            <p class="section-sub" data-i18n="copy_sub">Топ трейдеры Solana · реальные on-chain данные</p>
-          </div>
-          <button id="tradersRefresh" style="
-            display:flex;align-items:center;gap:5px;
-            padding:6px 12px;border-radius:20px;
-            border:1.5px solid var(--border);background:var(--surface);
-            font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;
-            transition:border-color .15s;
-          ">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-            <span data-i18n="copy_refresh">Обновить</span>
-          </button>
-        </div>
-        <div class="traders-list" id="tradersList">
-          <div class="skeleton"></div><div class="skeleton"></div>
-        </div>
-        <div class="copy-fee-note">
-          <span>ℹ️</span> <span data-i18n="copy_note">PnL рассчитывается по on-chain активности. Данные обновляются каждые 5 минут.</span>
-        </div>
-      </div>
-
       <!-- ── ИИ ────────────────────────────────────────────────────────── -->
       <div class="page" id="pageAI">
         <div class="ai-body">
@@ -230,10 +204,6 @@
       <button class="nav-btn" data-page="pageProfile">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 20a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <span data-i18n="nav_profile">Профиль</span>
-      </button>
-      <button class="nav-btn" data-page="pageCopy">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M17 20h5v-2a4 4 0 0 0-5.93-3.49M9 20H4v-2a4 4 0 0 1 5.93-3.49M15 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm6 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-14 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span data-i18n="nav_copy">Копи</span>
       </button>
       <button class="nav-btn" data-page="pageAI">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
