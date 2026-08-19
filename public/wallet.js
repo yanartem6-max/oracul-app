@@ -37,17 +37,30 @@ function loadWalletFromStorage() {
 async function initTonConnect() {
   if (tonConnectUI) return tonConnectUI;
 
-  // Динамический импорт TON Connect UI
-  const TonConnectUI = (await import('https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js')).TonConnectUI;
+  // Проверяем что TON Connect UI загружен из CDN
+  let retries = 0;
+  while (!window.TonConnectUI && retries < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    retries++;
+  }
 
-  tonConnectUI = new TonConnectUI({
-    manifestUrl: 'https://oracul.vercel.app/tonconnect-manifest.json',
-    buttonRootId: null, // не используем встроенную кнопку
-  });
+  if (!window.TonConnectUI) {
+    console.error('[TON Connect] TonConnectUI not loaded from CDN');
+    alert('Ошибка загрузки TON Connect. Обновите страницу.');
+    return null;
+  }
 
-  // Слушаем изменения статуса подключения
-  tonConnectUI.onStatusChange((wallet) => {
-    if (wallet) {
+  try {
+    tonConnectUI = new window.TonConnectUI({
+      manifestUrl: 'https://oracul.vercel.app/tonconnect-manifest.json',
+      buttonRootId: null, // не используем встроенную кнопку
+    });
+
+    console.log('[TON Connect] Initialized successfully');
+
+    // Слушаем изменения статуса подключения
+    tonConnectUI.onStatusChange((wallet) => {
+      if (wallet) {
       const address = wallet.account.address;
       connectedWallet = {
         type: 'ton',
@@ -101,10 +114,17 @@ async function fetchTonBalance(address) {
 export async function connectWallet() {
   const ui = await initTonConnect();
   
+  if (!ui) {
+    alert('Не удалось инициализировать TON Connect. Перезагрузите страницу.');
+    return;
+  }
+  
   try {
     await ui.openModal();
+    console.log('[TON Connect] Modal opened');
   } catch (e) {
     console.error('[TON Connect] ошибка подключения:', e);
+    alert('Ошибка подключения кошелька: ' + e.message);
   }
 }
 
