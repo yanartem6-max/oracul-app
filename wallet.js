@@ -39,7 +39,7 @@ async function initTonConnect() {
 
   // Проверяем что TON Connect UI загружен из CDN
   let retries = 0;
-  while (!window.TonConnectUI && retries < 50) {
+  while (!window.TonConnectUI && retries < 100) {
     await new Promise(resolve => setTimeout(resolve, 100));
     retries++;
   }
