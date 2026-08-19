@@ -81,10 +81,23 @@ app.use((req, res, next) => {
   if (req.path.match(/\.(js|css)$/)) {
     res.setHeader('Cache-Control', 'no-store');
   }
+  
+  // Явно устанавливаем Content-Type для JS модулей
+  if (req.path.endsWith('.js')) {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  }
+  
   next();
 });
 // Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filepath) => {
+    // Устанавливаем правильный MIME type для JS модулей
+    if (filepath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+  }
+}));
 
 // Serve index.html on root path
 app.get('/', (req, res) => {
