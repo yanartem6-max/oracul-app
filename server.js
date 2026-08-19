@@ -77,7 +77,23 @@ app.use((req, res, next) => {
   }
   next();
 });
+// Serve static files
 app.use(express.static(path.join(__dirname)));
+
+// Serve index.html on root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Catch-all for SPA routing
+app.get('/*', (req, res) => {
+  // If it's a static file request, let static middleware handle it
+  if (req.path.match(/\.(js|css|png|jpg|svg|ico|webp|woff|woff2)$/)) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  // For all other requests, serve index.html (SPA)
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ─── AI чат ──────────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `Ты — Оракул, ИИ-помощник крипто-платформы ORACUL.
