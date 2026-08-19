@@ -6,6 +6,15 @@ const TRANSLATIONS = {
     // Навигация
     nav_catalog: 'Каталог', nav_swap: 'Свап', nav_copy: 'Копи',
     nav_ai: 'ИИ', nav_settings: 'Настройки', nav_profile: 'Профиль',
+    // TON Wallet
+    ton_wallet_connected: 'TON кошелёк подключён',
+    ton_wallet_info: 'Вы подключены через TON Connect. Теперь можете обменивать TON на другие токены.',
+    balance: 'Баланс',
+    wallet_not_connected: 'Кошелёк не подключён',
+    sol_address_required: 'Введите адрес Solana кошелька для получения',
+    sol_address_invalid: 'Введите корректный Solana адрес',
+    swap_route: 'Маршрут',
+    swap_processing: 'Обработка займёт 2-5 минут',
     // Каталог
     tab_trending: '🔥 Trending', tab_new: '🆕 Новые', tab_search: '🔍 Поиск',
     search_placeholder: 'Тикер или адрес…', search_btn: '→',
@@ -147,6 +156,15 @@ const TRANSLATIONS = {
   en: {
     nav_catalog: 'Catalog', nav_swap: 'Swap', nav_copy: 'Copy',
     nav_ai: 'AI', nav_settings: 'Settings', nav_profile: 'Profile',
+    // TON Wallet
+    ton_wallet_connected: 'TON wallet connected',
+    ton_wallet_info: 'You are connected via TON Connect. You can now swap TON for other tokens.',
+    balance: 'Balance',
+    wallet_not_connected: 'Wallet not connected',
+    sol_address_required: 'Enter Solana wallet address to receive',
+    sol_address_invalid: 'Enter valid Solana address',
+    swap_route: 'Route',
+    swap_processing: 'Processing will take 2-5 minutes',
     tab_trending: '🔥 Trending', tab_new: '🆕 New', tab_search: '🔍 Search',
     search_placeholder: 'Ticker or address…', search_btn: '→',
     nothing_found: 'Nothing found',
@@ -278,6 +296,15 @@ const TRANSLATIONS = {
   zh: {
     nav_catalog: '市场', nav_swap: '兑换', nav_copy: '跟单',
     nav_ai: 'AI', nav_settings: '设置', nav_profile: '个人资料',
+    // TON Wallet
+    ton_wallet_connected: 'TON钱包已连接',
+    ton_wallet_info: '您已通过TON Connect连接。现在可以交换TON为其他代币。',
+    balance: '余额',
+    wallet_not_connected: '钱包未连接',
+    sol_address_required: '输入Solana钱包地址以接收',
+    sol_address_invalid: '输入有效的Solana地址',
+    swap_route: '路由',
+    swap_processing: '处理需要2-5分钟',
     tab_trending: '🔥 热门', tab_new: '🆕 新币', tab_search: '🔍 搜索',
     search_placeholder: '代号或地址…', search_btn: '→',
     nothing_found: '未找到结果',
@@ -409,6 +436,15 @@ const TRANSLATIONS = {
   es: {
     nav_catalog: 'Catálogo', nav_swap: 'Swap', nav_copy: 'Copiar',
     nav_ai: 'IA', nav_settings: 'Ajustes', nav_profile: 'Perfil',
+    // TON Wallet
+    ton_wallet_connected: 'Billetera TON conectada',
+    ton_wallet_info: 'Estás conectado a través de TON Connect. Ahora puedes intercambiar TON por otros tokens.',
+    balance: 'Saldo',
+    wallet_not_connected: 'Billetera no conectada',
+    sol_address_required: 'Ingresa la dirección de billetera Solana para recibir',
+    sol_address_invalid: 'Ingresa una dirección Solana válida',
+    swap_route: 'Ruta',
+    swap_processing: 'El procesamiento tomará 2-5 minutos',
     tab_trending: '🔥 Trending', tab_new: '🆕 Nuevas', tab_search: '🔍 Buscar',
     search_placeholder: 'Ticker o dirección…', search_btn: '→',
     nothing_found: 'No encontrado',
