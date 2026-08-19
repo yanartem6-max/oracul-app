@@ -83,12 +83,12 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from root directory
+app.use(express.static(__dirname));
 
 // Serve index.html on root path
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // API routes должны быть ДО catch-all
@@ -885,7 +885,7 @@ app.get('/api/ton/pools', async (req, res) => {
 
 // Catch-all для SPA - всё остальное -> index.html
 app.get('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`[ORACUL] сервер запущен на порту ${PORT}`));
