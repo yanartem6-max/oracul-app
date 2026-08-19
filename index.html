@@ -167,6 +167,14 @@
             <svg viewBox="0 0 24 24" fill="none"><path d="M4 12L20 4L14 20L11 13L4 12Z" stroke="white" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
           </button>
         </form>
+
+        <!-- Дисклеймер под полем ввода -->
+        <div style="padding:12px 16px;font-size:12px;color:var(--ink-3);opacity:0.7;line-height:1.4;text-align:center">
+          <span data-i18n="ai_footer">ORACUL— это ИИ. Используя его, вы соглашаетесь с</span>
+          <a onclick="showPage('pageTerms')" style="cursor:pointer;color:var(--ink-2);text-decoration:underline;font-weight:700;opacity:1" data-i18n="ai_footer_terms">Условиями</a>
+          <span data-i18n="ai_footer_and">и</span>
+          <a onclick="showPage('pagePrivacy')" style="cursor:pointer;color:var(--ink-2);text-decoration:underline;font-weight:700;opacity:1" data-i18n="ai_footer_privacy">Политикой конфиденциальности</a>.
+        </div>
       </div>
 
       <!-- ── ПРОФИЛЬ ──────────────────────────────────────────────────── -->
