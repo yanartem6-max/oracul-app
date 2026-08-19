@@ -883,8 +883,13 @@ app.get('/api/ton/pools', async (req, res) => {
   }
 });
 
-// Catch-all для SPA - всё остальное -> index.html
+// Catch-all для SPA - НО только для не-файловых путей
 app.get('/*', (req, res) => {
+  // Если запрос к файлу (.css, .js, .svg и т.д.) - пропускаем, пусть express.static обработает
+  if (req.path.match(/\.(css|js|svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|json|map)$/i)) {
+    return res.status(404).send('File not found');
+  }
+  // Для остальных путей - отдаём index.html
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
