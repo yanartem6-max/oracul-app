@@ -248,6 +248,10 @@ export function initSwap() {
 
       statusEl.textContent = `✓ ${t('swap_route') || 'Маршрут'}: Symbiosis (${swapTokenIn.symbol} → ${swapTokenOut.symbol})`;
       statusEl.style.color = 'var(--green)';
+      
+      // Проверяем ликвидность и показываем предупреждение
+      checkLiquidityWarning(data, amount);
+      
       swapBtn.textContent = t('swap_execute') || 'Выполнить обмен';
     } catch (e) {
       console.error('[Swap] Quote error:', e);
@@ -381,4 +385,93 @@ function tokenPickerModal(current) {
     closeBtn.addEventListener('click', cancel);
     modal.classList.add('open');
   });
+}
+
+
+// ─── Проверка ликвидности и предупреждения ────────────────────────────────────
+function checkLiquidityWarning(quoteData, amountIn) {
+  // Удаляем старое предупреждение если есть
+  const oldWarning = document.getElementById('liquidityWarning');
+  if (oldWarning) oldWarning.remove();
+
+  const warnings = [];
+  let severity = 'medium'; // low, medium, high
+
+  // 1. Проверка slippage (проскальзывание)
+  const slippage = parseFloat(quoteData.slippage || 0);
+  if (slippage > 5) {
+    warnings.push(`Высокое проскальзывание: ${slippage.toFixed(2)}%`);
+    severity = 'high';
+  } else if (slippage > 2) {
+    warnings.push(`Проскальзывание: ${slippage.toFixed(2)}%`);
+    severity = severity === 'high' ? 'high' : 'medium';
+  }
+
+  // 2. Проверка impact (влияние на цену)
+  const impact = parseFloat(quoteData.priceImpact || 0);
+  if (impact > 10) {
+    warnings.push(`Очень сильное влияние на цену: ${impact.toFixed(2)}%`);
+    severity = 'high';
+  } else if (impact > 5) {
+    warnings.push(`Сильное влияние на цену: ${impact.toFixed(2)}%`);
+    severity = severity === 'high' ? 'high' : 'medium';
+  }
+
+  // 3. Проверка размера сделки относительно ликвидности
+  if (quoteData.poolLiquidity) {
+    const liquidityUsd = parseFloat(quoteData.poolLiquidity);
+    const tradeSize = amountIn * (quoteData.tokenInPrice || 1);
+    const ratio = (tradeSize / liquidityUsd) * 100;
+
+    if (ratio > 10) {
+      warnings.push(`Сделка составляет ${ratio.toFixed(1)}% от ликвидности пула`);
+      severity = 'high';
+    } else if (ratio > 5) {
+      warnings.push(`Крупная сделка относительно ликвидности (${ratio.toFixed(1)}%)`);
+    }
+  }
+
+  // 4. Низкая ликвидность в принципе
+  if (quoteData.poolLiquidity && parseFloat(quoteData.poolLiquidity) < 10000) {
+    warnings.push('Низкая ликвидность пула (<$10K)');
+    severity = 'high';
+  }
+
+  // Если есть предупреждения - показываем
+  if (warnings.length > 0) {
+    const colors = {
+      low: { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },
+      medium: { bg: '#FED7AA', border: '#EA580C', text: '#7C2D12' },
+      high: { bg: '#FECACA', border: '#DC2626', text: '#991B1B' }
+    };
+    
+    const color = colors[severity];
+    const icon = severity === 'high' ? '🚨' : severity === 'medium' ? '⚠️' : 'ℹ️';
+
+    const warningEl = document.createElement('div');
+    warningEl.id = 'liquidityWarning';
+    warningEl.style.cssText = `
+      background: ${color.bg};
+      border: 2px solid ${color.border};
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 13px;
+      color: ${color.text};
+    `;
+    
+    warningEl.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${icon} Предупреждение о ликвидности</div>
+      <ul style="margin:0;padding-left:20px;line-height:1.6">
+        ${warnings.map(w => `<li>${w}</li>`).join('')}
+      </ul>
+      ${severity === 'high' ? '<div style="margin-top:8px;font-weight:600">⚡ Рекомендуется уменьшить сумму сделки</div>' : ''}
+    `;
+
+    // Вставляем перед кнопкой свапа
+    const swapBtn = document.getElementById('swapBtn');
+    if (swapBtn && swapBtn.parentNode) {
+      swapBtn.parentNode.insertBefore(warningEl, swapBtn);
+    }
+  }
 }

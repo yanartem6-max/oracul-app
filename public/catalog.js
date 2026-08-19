@@ -1,5 +1,6 @@
 // catalog.js — каталог мем-коинов с лого и графиками
 import { fmtPrice, t, onSettingsChange } from './settings.js?v=15';
+import { renderRiskScore } from './risk-analyzer.js';
 
 export let currentCoin = null;
 
@@ -333,6 +334,8 @@ export function renderCoinModal(pair) {
     <div id="chartContainer" style="height:300px;border-radius:12px;overflow:hidden;margin-bottom:16px;background:rgba(255,138,61,.03);border:1px solid rgba(255,138,61,.12)">
       <div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">${t('loading') || '⏳'}</div>
     </div>
+
+    ${renderRiskScore(pair)}
 
     <div class="modal-stat-grid">
       <div class="modal-stat">
