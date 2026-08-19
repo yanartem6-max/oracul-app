@@ -380,6 +380,42 @@ app.get('/api/coins/new', async (req, res) => {
   }
 });
 
+// ─── РАСТУТ (GAINERS) — top растущие монеты за 24ч ───────────────────────────
+app.get('/api/coins/gainers', async (req, res) => {
+  try {
+    // Используем trending список но сортируем по росту цены
+    const results = await Promise.allSettled(
+      MEME_QUERIES.map(q =>
+        fetch(`https://api.dexscreener.com/latest/dex/search?q=${q}`, {
+          headers: { 'User-Agent': 'ORACUL/1.0' }
+        })
+        .then(r => r.json())
+        .then(async d => {
+          const pairs = (d.pairs || [])
+            // Фильтруем мусорные пары и только растущие
+            .filter(p =>
+              (p.liquidity?.usd || 0) >= 500 &&
+              (p.volume?.h24   || 0) >= 1000 &&
+              (p.priceChange?.h24 || 0) > 0  // только растущие
+            )
+            .sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0)); // сортируем по росту
+          const best = pairs[0] || null;
+          if (best) await enrichPairLogo(best);
+          return best;
+        })
+      )
+    );
+    const pairs = results
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => r.value)
+      .sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0)); // ещё раз сортируем
+    res.json(pairs);
+  } catch (e) {
+    console.error('[ORACUL] gainers error:', e);
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // ─── ПОИСК ───────────────────────────────────────────────────────────────────
 app.get('/api/coins/search', async (req, res) => {
   const q = req.query.q;

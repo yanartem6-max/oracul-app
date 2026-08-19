@@ -249,6 +249,7 @@ export function initCatalog(onCoinClick) {
   const load = tab => {
     _catalogActiveTab = tab;
     if (tab === 'trending') fetchAndRender('/api/coins/trending', listEl, onCoinClick);
+    if (tab === 'gainers')  fetchAndRender('/api/coins/gainers',  listEl, onCoinClick);
     if (tab === 'new')      fetchAndRender('/api/coins/new',      listEl, onCoinClick);
   };
 
