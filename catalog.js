@@ -215,12 +215,12 @@ async function fetchAndRender(url, listEl, onClick) {
 
     listEl.innerHTML = '';
     if (!pairs.length) {
-      listEl.innerHTML = '<p style="color:var(--ink-500);font-size:14px;padding:20px 0">Ничего не найдено</p>';
+      listEl.innerHTML = `<p style="color:var(--ink-500);font-size:14px;padding:20px 0">${t('nothing_found')}</p>`;
       return;
     }
     pairs.slice(0, 50).forEach(p => listEl.appendChild(makeCoinCard(p, onClick)));
   } catch (e) {
-    listEl.innerHTML = `<p style="color:var(--red);font-size:13px;padding:16px 0">Ошибка: ${e.message}</p>`;
+    listEl.innerHTML = `<p style="color:var(--red);font-size:13px;padding:16px 0">${t('error')}: ${e.message}</p>`;
   }
 }
 
@@ -393,7 +393,7 @@ export async function initChart(pair) {
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
 
-    container.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">⏳ Загружаю…</div>';
+    container.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">⏳ ${t('loading')}</div>`;
 
     if (allCandles[resolution]) {
       drawCanvas(container, allCandles[resolution]);
