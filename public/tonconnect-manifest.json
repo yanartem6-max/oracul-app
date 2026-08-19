@@ -1,0 +1,8 @@
+{
+  "url": "http://localhost:3000",
+  "name": "ORACUL",
+  "iconUrl": "http://localhost:3000/logo-new.svg",
+  "termsOfUseUrl": "http://localhost:3000",
+  "privacyPolicyUrl": "http://localhost:3000",
+  "platforms": ["iphone", "android", "windows", "macos", "linux"]
+}

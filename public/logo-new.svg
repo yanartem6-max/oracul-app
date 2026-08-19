@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Оранжевый круг с лёгкой тенью -->
+  <defs>
+    <filter id="s" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#c45000" flood-opacity="0.35"/>
+    </filter>
+    <radialGradient id="bg" cx="45%" cy="38%" r="60%">
+      <stop offset="0%" stop-color="#FF8C2A"/>
+      <stop offset="100%" stop-color="#E85D00"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Круг-фон -->
+  <circle cx="50" cy="50" r="48" fill="url(#bg)" filter="url(#s)"/>
+
+  <!-- Глаз (белый, с эффектом объёма) -->
+  <!-- Верхнее веко -->
+  <path d="M14 50 C20 28, 40 20, 50 20 C60 20, 80 28, 86 50
+           C80 40, 63 34, 50 34 C37 34, 20 40, 14 50 Z"
+        fill="white" opacity="0.95"/>
+
+  <!-- Нижнее веко -->
+  <path d="M14 50 C20 68, 38 76, 50 77 C62 77, 80 68, 86 50
+           C80 62, 63 68, 50 68 C37 68, 20 62, 14 50 Z"
+        fill="white" opacity="0.9"/>
+
+  <!-- Зрачок -->
+  <circle cx="50" cy="50" r="16" fill="white"/>
+
+  <!-- Бликовый полукруг на зрачке -->
+  <path d="M38 42 C38 36, 56 34, 60 40 C55 37, 43 37, 38 42 Z"
+        fill="white" opacity="0.5"/>
+
+  <!-- Тонкая внутренняя тень вокруг зрачка -->
+  <circle cx="50" cy="50" r="16" fill="none"
+          stroke="#d05800" stroke-width="0.6" opacity="0.2"/>
+</svg>
