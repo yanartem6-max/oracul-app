@@ -8,7 +8,6 @@ import { renderWatchlistPage } from './watchlist.js';
 import { renderPortfolioPage } from './portfolio.js';
 import { renderSmartWalletsCard } from './smart-wallets.js';
 import { renderReferralPage } from './referral.js';
-import { renderSmartWalletsCard as renderWallets } from './smart-wallets.js';
 import { renderSybilAnalysis } from './sybil-detection.js';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
@@ -28,7 +27,7 @@ const mainEl    = document.getElementById('main');
 const startedAt = Date.now();
 
 function revealApp() {
-  const wait = Math.max(0, 1400 - (Date.now() - startedAt));
+  const wait = Math.max(0, 800 - (Date.now() - startedAt)); // Уменьшили с 1400 до 800ms
   setTimeout(() => {
     loadingEl.classList.add('is-leaving');
     setTimeout(() => {
@@ -37,8 +36,17 @@ function revealApp() {
     }, 500);
   }, wait);
 }
+
+// Триггеры для показа app
 window.addEventListener('load', revealApp);
 if (document.readyState === 'complete') revealApp();
+
+// Fallback: если ничего не произошло за 3 сек - форсируем показ
+setTimeout(() => {
+  if (loadingEl && loadingEl.style.display !== 'none') {
+    revealApp();
+  }
+}, 3000);
 
 // ─── Навигация ────────────────────────────────────────────────────────────────
 const navBtns = document.querySelectorAll('.nav-btn');
