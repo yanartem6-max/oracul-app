@@ -262,8 +262,11 @@ export function renderAIAdvisorButtons(pair) {
 
 // Глобальные функции для UI
 window.requestAIAnalysis = async (pairAddress) => {
-  const { currentCoin } = await import('./catalog.js');
-  if (!currentCoin || currentCoin.pairAddress !== pairAddress) return;
+  const currentCoin = window.lastSelectedPair;
+  if (!currentCoin || currentCoin.pairAddress !== pairAddress) {
+    console.error('[AI] currentCoin not set or address mismatch');
+    return;
+  }
 
   const btn = event.target;
   btn.disabled = true;
@@ -277,6 +280,7 @@ window.requestAIAnalysis = async (pairAddress) => {
       alert('Ошибка: ' + result.error);
     }
   } catch (e) {
+    console.error('[AI] Analysis error:', e);
     alert('Ошибка при получении анализа');
   }
 
@@ -285,8 +289,11 @@ window.requestAIAnalysis = async (pairAddress) => {
 };
 
 window.requestFOMOAdvice = async (pairAddress) => {
-  const { currentCoin } = await import('./catalog.js');
-  if (!currentCoin || currentCoin.pairAddress !== pairAddress) return;
+  const currentCoin = window.lastSelectedPair;
+  if (!currentCoin || currentCoin.pairAddress !== pairAddress) {
+    console.error('[FOMO] currentCoin not set or address mismatch');
+    return;
+  }
 
   const btn = event.target;
   btn.disabled = true;

@@ -1,5 +1,5 @@
 // ===== ORACUL — главный модуль =====
-import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=15';
+import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=17';
 import { initWalletUI } from './wallet.js?v=16';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
@@ -56,7 +56,7 @@ function showPage(pageId) {
   if (pageId === 'pageSettings') renderSettings();
   
   if (pageId === 'pageWatchlist') {
-    import('./watchlist.js').then(m => m.renderWatchlistPage());
+    import('./watchlist.js?v=17').then(m => m.renderWatchlistPage());
   }
   if (pageId === 'pagePortfolio') {
     import('./portfolio.js').then(m => m.renderPortfolioPage());
@@ -137,11 +137,11 @@ function openCoinModal(pair) {
       const riskHtml = renderRiskScore(pair);
       
       // AI Buttons
-      const { renderAIAdvisorButtons } = await import('./ai-advisor.js');
+      const { renderAIAdvisorButtons } = await import('./ai-advisor.js?v=17');
       const aiHtml = renderAIAdvisorButtons(pair);
       
       // Watchlist Button
-      const { renderWatchlistButton } = await import('./watchlist.js');
+      const { renderWatchlistButton } = await import('./watchlist.js?v=17');
       const watchlistHtml = renderWatchlistButton(pair);
       
       const analysisContainer = coinModalContent.querySelector('#analysisContainer');

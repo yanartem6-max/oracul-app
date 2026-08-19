@@ -372,34 +372,44 @@ function renderWatchlistItem(item) {
 }
 
 // Глобальные функции для UI
-window.toggleWatchlist = async (pairAddress) => {
-  // Находим pair в текущем контексте
-  const { currentCoin } = await import('./catalog.js');
-  if (!currentCoin || currentCoin.pairAddress !== pairAddress) return;
-
-  if (isInWatchlist(pairAddress)) {
-    const result = removeFromWatchlist(pairAddress);
-    showToast(result.message, result.success ? '#22C55E' : '#EF4444');
-  } else {
-    // Показываем диалог для настройки алертов
-    const alertUp = prompt('Алерт при росте на (%):', '10');
-    const alertDown = prompt('Алерт при падении на (%):', '-10');
-    
-    const result = addToWatchlist(currentCoin, parseFloat(alertUp) || 10, parseFloat(alertDown) || -10);
-    showToast(result.message, result.success ? '#22C55E' : '#EF4444');
-    
-    // Запрашиваем разрешение на уведомления
-    if (result.success) {
-      requestNotificationPermission();
-    }
+window.toggleWatchlist = (pairAddress) => {
+  // Используем глобальную переменную lastSelectedPair из catalog.js
+  // Это более надёжно чем async import
+  const currentCoin = window.lastSelectedPair;
+  
+  if (!currentCoin || currentCoin.pairAddress !== pairAddress) {
+    console.error('[Watchlist] currentCoin not set or address mismatch');
+    return;
   }
 
-  // Обновляем кнопку
-  const btn = document.querySelector(`[data-pair-address="${pairAddress}"]`);
-  if (btn && currentCoin) {
-    const parent = btn.parentElement;
-    btn.remove();
-    parent.innerHTML += renderWatchlistButton(currentCoin);
+  try {
+    if (isInWatchlist(pairAddress)) {
+      const result = removeFromWatchlist(pairAddress);
+      showToast(result.message, result.success ? '#22C55E' : '#EF4444');
+    } else {
+      // Показываем диалог для настройки алертов
+      const alertUp = prompt('Алерт при росте на (%):', '10');
+      const alertDown = prompt('Алерт при падении на (%):', '-10');
+      
+      const result = addToWatchlist(currentCoin, parseFloat(alertUp) || 10, parseFloat(alertDown) || -10);
+      showToast(result.message, result.success ? '#22C55E' : '#EF4444');
+      
+      // Запрашиваем разрешение на уведомления
+      if (result.success) {
+        requestNotificationPermission();
+      }
+    }
+
+    // Обновляем кнопку
+    const btn = document.querySelector(`[data-pair-address="${pairAddress}"]`);
+    if (btn && currentCoin) {
+      const parent = btn.parentElement;
+      btn.remove();
+      parent.innerHTML += renderWatchlistButton(currentCoin);
+    }
+  } catch (e) {
+    console.error('[Watchlist] Toggle error:', e);
+    showToast('Ошибка при сохранении', '#EF4444');
   }
 };
 
