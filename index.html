@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>ORACUL</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@2.0.6/dist/tonconnect-ui.min.js"></script>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ ЗАГРУЗКА ══════════════════════════════════════════════════════════ -->
+  <div id="loading">
+    <div class="load-logo">
+      <img src="logo-new.svg" alt="ORACUL" />
+    </div>
+    <div>
+      <div class="load-name">ORACUL</div>
+      <div class="load-sub">CRYPTO · MEME · AI</div>
+    </div>
+    <div class="load-bar"><div class="load-bar-inner"></div></div>
+  </div>
+
+  <!-- ══ ГЛАВНЫЙ ЭКРАН ══════════════════════════════════════════════════════ -->
+  <div id="main" class="screen">
+
+    <!-- Хедер -->
+    <header class="top-bar">
+      <div class="logo-row">
+        <div class="logo-icon">
+          <img src="logo-new.svg" alt="ORACUL" />
+        </div>
+        <span class="logo-text">ORACUL</span>
+      </div>
+      <button class="wallet-btn" id="walletBtn">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M16 14a1 1 0 1 1 2 0 1 1 0 0 1-2 0z" fill="currentColor"/><path d="M6 7V5a4 4 0 0 1 8 0v2" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span id="walletLabel" data-i18n="connect_wallet">Подключить</span>
+      </button>
+    </header>
+
+    <!-- Контент -->
+    <div class="page-content" id="pageContent">
+
+      <!-- ── КАТАЛОГ ────────────────────────────────────────────────────── -->
+      <div class="page active" id="pageCatalog">
+        <!-- Баланс кошелька над вкладками -->
+        <div id="catalogBalance" style="display:none;background:linear-gradient(135deg,var(--orange),#ff8c42);border-radius:12px;padding:16px;margin-bottom:12px;color:#fff">
+          <div style="font-size:13px;opacity:0.9;margin-bottom:4px" data-i18n="wallet_balance">Баланс кошелька</div>
+          <div style="font-size:28px;font-weight:700;font-family:var(--mono)" id="catalogBalanceAmount">$0.00</div>
+          <div style="font-size:12px;opacity:0.85;margin-top:6px" id="catalogBalanceTokens">SOL + токены</div>
+        </div>
+
+        <div class="section-tabs">
+          <button class="tab-btn active" data-tab="trending" data-i18n="tab_trending">🔥 Trending</button>
+          <button class="tab-btn" data-tab="new" data-i18n="tab_new">🆕 Новые</button>
+          <button class="tab-btn" data-tab="search" data-i18n="tab_search">🔍 Поиск</button>
+        </div>
+        <div class="search-row" id="searchRow" style="display:none">
+          <input type="text" id="searchInput" data-i18n-ph="search_placeholder" placeholder="Тикер или адрес…" />
+          <button id="searchBtn" data-i18n="search_btn">→</button>
+        </div>
+        <div class="coins-list" id="coinsList">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+      </div>
+
+      <!-- ── СВАП ──────────────────────────────────────────────────────── -->
+      <div class="page" id="pageSwap">
+        <div class="swap-card">
+          <h2 data-i18n="swap_title">Обмен токенов</h2>
+          <div class="swap-field">
+            <label data-i18n="swap_give">Отдаю</label>
+            <div class="swap-input-row">
+              <input type="number" id="swapAmountIn" placeholder="0.00" />
+              <button class="token-pick-btn" id="pickTokenIn">SOL ▾</button>
+            </div>
+          </div>
+          <div class="swap-arrow">⇅</div>
+          <div class="swap-field">
+            <label><span data-i18n="swap_get">Получаю</span> <span id="swapReceiveLabel" style="font-size:11px;color:var(--ink-3);font-weight:400"></span></label>
+            <div class="swap-input-row">
+              <input type="number" id="swapAmountOut" placeholder="0.00" readonly />
+              <button class="token-pick-btn" id="pickTokenOut">MEME ▾</button>
+            </div>
+          </div>
+
+          <!-- Инфо о свапе -->
+          <div id="swapQuoteBox" style="display:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;margin:8px 0;font-size:12px;color:var(--ink-2)">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span data-i18n="swap_receive">Получаете</span>
+              <span id="swapQuoteOut" style="font-weight:700;color:var(--green)"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span data-i18n="swap_rate">Курс</span>
+              <span id="swapQuoteRate" style="font-weight:600;font-family:var(--mono)"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span data-i18n="swap_platform_fee">Комиссия платформы</span>
+              <span style="font-weight:600;color:var(--orange)">0.5%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span data-i18n="swap_slippage">Проскальзывание</span>
+              <span id="swapQuoteSlippage" style="font-weight:600">1%</span>
+            </div>
+          </div>
+
+          <div class="swap-info" id="swapInfo" style="display:none"></div>
+          <button class="primary-btn" id="swapBtn" data-i18n="swap_quote_btn">Получить котировку</button>
+          <div class="swap-status" id="swapStatus"></div>
+
+          <!-- Дисклеймер -->
+          <div class="swap-disclaimer" id="swapDisclaimer">
+            <div class="swap-disclaimer-title" data-i18n="swap_disclaimer_title">⚠️ Риски и безопасность</div>
+            <ul>
+              <li data-i18n="swap_risk1">Мем-коины крайне волатильны. Цена может упасть на 90%+ в любой момент.</li>
+              <li data-i18n="swap_risk2">Свап выполняется через Jupiter — децентрализованный агрегатор. Транзакции необратимы.</li>
+              <li data-i18n="swap_risk3">ORACUL не хранит и не передаёт данные вашего кошелька. Приватный ключ никогда не покидает ваше устройство.</li>
+              <li data-i18n="swap_risk4">Инвестируй только то, что готов потерять полностью.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── COPY-TRADING ──────────────────────────────────────────────── -->
+      <div class="page" id="pageCopy">
+        <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <h2 data-i18n="copy_title">Copy-Trading</h2>
+            <p class="section-sub" data-i18n="copy_sub">Топ трейдеры Solana · реальные on-chain данные</p>
+          </div>
+          <button id="tradersRefresh" style="
+            display:flex;align-items:center;gap:5px;
+            padding:6px 12px;border-radius:20px;
+            border:1.5px solid var(--border);background:var(--surface);
+            font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;
+            transition:border-color .15s;
+          ">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            <span data-i18n="copy_refresh">Обновить</span>
+          </button>
+        </div>
+        <div class="traders-list" id="tradersList">
+          <div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+        <div class="copy-fee-note">
+          <span>ℹ️</span> <span data-i18n="copy_note">PnL рассчитывается по on-chain активности. Данные обновляются каждые 5 минут.</span>
+        </div>
+      </div>
+
+      <!-- ── ИИ ────────────────────────────────────────────────────────── -->
+      <div class="page" id="pageAI">
+        <div class="ai-body">
+          <!-- Лого-тень по центру -->
+          <div class="ai-bg-logo" aria-hidden="true">
+            <img src="logo-new.svg" alt="" />
+          </div>
+          <!-- Сообщения -->
+          <div class="messages" id="messages"></div>
+        </div>
+        <!-- Поле ввода -->
+        <form class="composer" id="composer">
+          <textarea id="input" rows="1" data-i18n-ph="ai_placeholder" placeholder="Спроси про монету, риски, стратегию…"></textarea>
+          <button type="submit" class="send-btn" aria-label="Отправить">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 12L20 4L14 20L11 13L4 12Z" stroke="white" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </button>
+        </form>
+      </div>
+
+      <!-- ── ПРОФИЛЬ ──────────────────────────────────────────────────── -->
+      <div class="page" id="pageProfile">
+        <div style="background:linear-gradient(135deg,var(--orange),#ff8c42);border-radius:12px;padding:24px;margin-bottom:16px;color:#fff;text-align:center">
+          <div style="font-size:13px;opacity:0.9;margin-bottom:8px" data-i18n="profile_total_balance">Общий баланс</div>
+          <div style="font-size:48px;font-weight:700;font-family:var(--mono);margin-bottom:12px" id="profileBalanceAmount">$0.00</div>
+          <div style="font-size:12px;opacity:0.85" id="profileBalanceDetails">0 SOL + 0 токенов</div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">📊 <span data-i18n="profile_recent_activity">Недавние действия</span></h3>
+          <div id="profileTxList" style="display:flex;flex-direction:column;gap:8px">
+            <div style="text-align:center;color:var(--ink-3);padding:24px;font-size:13px" data-i18n="no_actions">
+              Нет действий
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface-2);border-radius:12px;padding:16px;border:1.5px solid var(--border)">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">ℹ️ <span data-i18n="profile_about">О приложении</span></h3>
+          <div style="font-size:12px;color:var(--ink-3);line-height:1.6">
+            <p>✅ ORACUL не хранит данные кошельков</p>
+            <p>✅ Приватные ключи остаются только у вас</p>
+            <p>✅ Все данные получены из блокчейна</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── НАСТРОЙКИ ──────────────────────────────────────────────────── -->
+      <div class="page" id="pageSettings">
+        <div class="settings-page" id="settingsContent"></div>
+      </div>
+
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-page="pageCatalog">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span data-i18n="nav_catalog">Каталог</span>
+      </button>
+      <button class="nav-btn" data-page="pageSwap">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 16V4m0 0L4 7m3-3l3 3M17 8v12m0 0l3-3m-3 3l-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="nav_swap">Свап</span>
+      </button>
+      <button class="nav-btn" data-page="pageProfile">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 20a6 6 0 0 1 12 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span data-i18n="nav_profile">Профиль</span>
+      </button>
+      <button class="nav-btn" data-page="pageCopy">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 20h5v-2a4 4 0 0 0-5.93-3.49M9 20H4v-2a4 4 0 0 1 5.93-3.49M15 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm6 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-14 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="nav_copy">Копи</span>
+      </button>
+      <button class="nav-btn" data-page="pageAI">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span data-i18n="nav_ai">ИИ</span>
+      </button>
+      <button class="nav-btn" data-page="pageSettings">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span data-i18n="nav_settings">Настройки</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Модалка: детали монеты -->
+  <div class="modal-overlay" id="coinModal">
+    <div class="modal-card" id="coinModalCard">
+      <button class="modal-close" id="coinModalClose">✕</button>
+      <div id="coinModalContent"></div>
+    </div>
+  </div>
+
+  <!-- Модалка: выбор токена -->
+  <div class="modal-overlay" id="tokenPickModal">
+    <div class="modal-card">
+      <button class="modal-close" id="tokenPickClose">✕</button>
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:12px" data-i18n="pick_token">Выбрать токен</h3>
+      <input type="text" id="tokenPickSearch" placeholder="Поиск…" />
+      <div id="tokenPickList"></div>
+    </div>
+  </div>
+
+</div>
+<script src="app.js?v=15" type="module"></script>
+</body>
+</html>
