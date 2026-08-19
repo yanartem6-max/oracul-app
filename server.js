@@ -85,15 +85,8 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Catch-all for SPA routing
-app.get('/*', (req, res) => {
-  // If it's a static file request, let static middleware handle it
-  if (req.path.match(/\.(js|css|png|jpg|svg|ico|webp|woff|woff2)$/)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-  // For all other requests, serve index.html (SPA)
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// API routes должны быть ДО catch-all
+// (они уже определены выше в коде)
 
 // ─── AI чат ──────────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `Ты — Оракул, ИИ-помощник крипто-платформы ORACUL.
@@ -882,6 +875,11 @@ app.get('/api/ton/pools', async (req, res) => {
     console.error('[TON] pools error:', e.message);
     res.status(502).json({ error: e.message });
   }
+});
+
+// Catch-all для SPA - всё остальное -> index.html
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`[ORACUL] сервер запущен на порту ${PORT}`));
