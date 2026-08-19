@@ -15,10 +15,54 @@ const FEE_ACCOUNT  = process.env.FEE_ACCOUNT  || '';
 
 if (!GROQ_API_KEY) console.warn('[ORACUL] GROQ_API_KEY не задан');
 
+// ─── CORS Whitelist ────────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  'https://web.telegram.org',
+  'https://t.me',
+  'https://twa.dev',
+  'http://localhost:3000',  // Только для разработки
+  'http://localhost:3001',
+  process.env.ALLOWED_ORIGINS_CUSTOM || '',
+].filter(Boolean);
+
+// Rate limiting - простой счетчик per IP
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 минута
+const RATE_LIMIT_MAX = 50; // max запросов в минуту
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  if (!requestCounts.has(ip)) {
+    requestCounts.set(ip, { count: 0, resetAt: now + RATE_LIMIT_WINDOW });
+  }
+  
+  const data = requestCounts.get(ip);
+  if (now > data.resetAt) {
+    data.count = 0;
+    data.resetAt = now + RATE_LIMIT_WINDOW;
+  }
+  
+  data.count++;
+  return data.count <= RATE_LIMIT_MAX;
+}
+
 app.use(express.json({ limit: '2mb' }));
 app.use((req, res, next) => {
-  // CORS хедеры
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // ─── Rate Limiting ───────────────────────────────────────────────────────────
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many requests. Try again later.' });
+  }
+
+  // ─── CORS проверка ───────────────────────────────────────────────────────────
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (req.method !== 'OPTIONS') {
+    // Логируем подозрительные запросы
+    console.warn(`[SECURITY] Rejected request from origin: ${origin || 'no-origin'}`);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
@@ -41,11 +85,58 @@ const SYSTEM_PROMPT = `Ты — Оракул, ИИ-помощник крипто
 Отвечай кратко и по делу. Анализируй монеты, объясняй риски, давай советы.
 Всегда предупреждай о рисках. Отвечай на языке пользователя.`;
 
+// Per-user rate limit for expensive chat API
+const chatRateLimits = new Map();
+const CHAT_RATE_LIMIT = 20; // max 20 messages per hour per user
+const CHAT_RATE_WINDOW = 3600000; // 1 hour
+
+function checkChatRateLimit(ip) {
+  const now = Date.now();
+  if (!chatRateLimits.has(ip)) {
+    chatRateLimits.set(ip, { count: 0, resetAt: now + CHAT_RATE_WINDOW });
+  }
+  
+  const data = chatRateLimits.get(ip);
+  if (now > data.resetAt) {
+    data.count = 0;
+    data.resetAt = now + CHAT_RATE_WINDOW;
+  }
+  
+  data.count++;
+  return data.count <= CHAT_RATE_LIMIT;
+}
+
 app.post('/api/chat', async (req, res) => {
+  // Strict rate limiting for chat (expensive API)
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+  if (!checkChatRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many chat requests. Limit: 20 per hour.' });
+  }
+
   try {
     const { messages } = req.body;
+    
+    // ─── Input Validation ───────────────────────────────────────────────────────
     if (!Array.isArray(messages) || !messages.length)
       return res.status(400).json({ error: 'messages required' });
+    
+    // Validate message structure and length
+    if (messages.length > 50) {
+      return res.status(400).json({ error: 'Too many messages in history' });
+    }
+    
+    for (const msg of messages) {
+      if (typeof msg.content !== 'string' || msg.content.length > 5000) {
+        return res.status(400).json({ error: 'Invalid message format or too long' });
+      }
+      if (!['user', 'assistant'].includes(msg.role)) {
+        return res.status(400).json({ error: 'Invalid message role' });
+      }
+    }
+
+    if (!GROQ_API_KEY) {
+      return res.status(503).json({ error: 'AI service not configured' });
+    }
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
