@@ -106,6 +106,14 @@ function formatAIMessage(text) {
     // строки с % изменением
     .replace(/(\+[\d.]+%)/g, '<span style="color:var(--green);font-weight:600">$1</span>')
     .replace(/(−[\d.]+%|-[\d.]+%)/g, '<span style="color:var(--red);font-weight:600">$1</span>')
+    // Условия - кликабельная ссылка на вкладку
+    .replace(/Условия/g, '<a onclick="showPage(\'pageTerms\')" style="cursor:pointer;color:var(--orange);text-decoration:underline;font-weight:600">Условия</a>')
+    // Terms - clickable link
+    .replace(/Terms/g, '<a onclick="showPage(\'pageTerms\')" style="cursor:pointer;color:var(--orange);text-decoration:underline;font-weight:600">Terms</a>')
+    // Политика конфиденциальности - кликабельная ссылка
+    .replace(/Политика конфиденциальности/g, '<a onclick="showPage(\'pagePrivacy\')" style="cursor:pointer;color:var(--orange);text-decoration:underline;font-weight:600">Политика конфиденциальности</a>')
+    // Privacy Policy - clickable link
+    .replace(/Privacy Policy/g, '<a onclick="showPage(\'pagePrivacy\')" style="cursor:pointer;color:var(--orange);text-decoration:underline;font-weight:600">Privacy Policy</a>')
     // переносы строк
     .replace(/\n/g, '<br>');
 }
@@ -199,7 +207,7 @@ onSettingsChange((key) => {
 
 setTimeout(() => {
   if (!messagesEl.children.length) {
-    addMessage('ai', `👁️ **${t('ai_greeting_bold') || 'Привет! Я ИИ-Оракул ORACUL.'}**\n\n${t('ai_greeting_help') || 'Я помогу тебе:'}\n- 📊 ${t('ai_help1') || 'Анализировать мем-коины и токены'}\n- ⚠️ ${t('ai_help2') || 'Оценивать риски перед покупкой'}\n- 🔮 ${t('ai_help3') || 'Разбираться в DeFi и Solana'}\n- 💡 ${t('ai_help4') || 'Находить интересные возможности'}\n\n${t('ai_greeting_end') || 'Спроси меня про любую монету или стратегию 🚀'}`);
+    addMessage('ai', `🎯 **ORACUL**\n\n${t('ai_greeting_help') || 'Я помогу тебе:'}\n- 📊 ${t('ai_help1') || 'Анализировать мем-коины и токены'}\n- ⚠️ ${t('ai_help2') || 'Оценивать риски перед покупкой'}\n- 🔮 ${t('ai_help3') || 'Разбираться в DeFi и Solana'}\n- 💡 ${t('ai_help4') || 'Находить интересные возможности'}\n\n${t('ai_greeting_end') || 'Спроси меня про любую монету или стратегию 🚀'}\n\n${t('ai_disclaimer') || '⚠️ ИИ может ошибаться. Всегда перепроверяй информацию самостоятельно!'}`);
   }
 }, 1800);
 
@@ -207,6 +215,6 @@ setTimeout(() => {
 onSettingsChange((key) => {
   if (key === 'lang' && messagesEl.children.length <= 1) {
     messagesEl.innerHTML = '';
-    addMessage('ai', `👁️ **${t('ai_greeting_bold') || 'Hello! I am AI Oracle ORACUL.'}**\n\n${t('ai_greeting_help') || 'I can help you:'}\n- 📊 ${t('ai_help1') || 'Analyze meme coins and tokens'}\n- ⚠️ ${t('ai_help2') || 'Assess risks before buying'}\n- 🔮 ${t('ai_help3') || 'Understand DeFi and Solana'}\n- 💡 ${t('ai_help4') || 'Find interesting opportunities'}\n\n${t('ai_greeting_end') || 'Ask me about any coin or strategy 🚀'}`);
+    addMessage('ai', `🎯 **ORACUL**\n\n${t('ai_greeting_help') || 'I can help you:'}\n- 📊 ${t('ai_help1') || 'Analyze meme coins and tokens'}\n- ⚠️ ${t('ai_help2') || 'Assess risks before buying'}\n- 🔮 ${t('ai_help3') || 'Understand DeFi and Solana'}\n- 💡 ${t('ai_help4') || 'Find interesting opportunities'}\n\n${t('ai_greeting_end') || 'Ask me about any coin or strategy 🚀'}\n\n${t('ai_disclaimer') || '⚠️ AI can make mistakes. Always double-check information!'}`);
   }
 });
