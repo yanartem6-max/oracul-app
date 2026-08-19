@@ -49,6 +49,57 @@ function showPage(pageId) {
 
 navBtns.forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
 
+// ─── Модальные окна для Условий и Политики ────────────────────────────────────
+function showTermsModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-height:80vh;overflow-y:auto">
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--orange)" data-i18n="terms">Условия</h2>
+      <div style="font-size:14px;line-height:1.6;color:var(--ink-2)">
+        <h3 style="font-weight:700;margin:16px 0 8px" data-i18n="terms_h1">Условия использования ORACUL</h3>
+        <p data-i18n="terms_p1">1. ORACUL - это инструмент для анализа крипто-активов на блокчейне Solana.</p>
+        <p data-i18n="terms_p2">2. Приватные ключи пользователей никогда не передаются на сервер.</p>
+        <p data-i18n="terms_p3">3. Пользователь несет полную ответственность за свои решения о покупке/продаже токенов.</p>
+        <p data-i18n="terms_p4">4. ORACUL предоставляет информацию в образовательных целях.</p>
+        <p style="margin-top:16px;font-weight:600" data-i18n="terms_p5">5. Все данные получены из публичных APIs блокчейна.</p>
+        <p data-i18n="terms_p6">6. Использование сервиса означает согласие с этими условиями.</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  applyTranslations(); // Применяем переводы к новому контенту
+}
+
+function showPrivacyModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-height:80vh;overflow-y:auto">
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;color:var(--orange)" data-i18n="privacy_policy">Политика конфиденциальности</h2>
+      <div style="font-size:14px;line-height:1.6;color:var(--ink-2)">
+        <h3 style="font-weight:700;margin:16px 0 8px" data-i18n="privacy_h1">Как мы защищаем ваши данные</h3>
+        <p data-i18n="privacy_p1">1. ORACUL не хранит приватные ключи пользователей.</p>
+        <p data-i18n="privacy_p2">2. Все данные кошельков получаются напрямую из блокчейна через публичные APIs.</p>
+        <p data-i18n="privacy_p3">3. Мы не отслеживаем и не сохраняем личную информацию.</p>
+        <p data-i18n="privacy_p4">4. Соединение защищено HTTPS шифрованием.</p>
+        <p style="margin-top:16px;font-weight:600" data-i18n="privacy_p5">5. Никакие персональные данные не передаются третьим лицам.</p>
+        <p data-i18n="privacy_p6">6. Вся обработка данных происходит локально в браузере.</p>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  applyTranslations(); // Применяем переводы к новому контенту
+}
+
+// Делаем функции глобальными для использования из onclick
+window.showTermsModal = showTermsModal;
+window.showPrivacyModal = showPrivacyModal;
+
 // ─── Модалка монеты ───────────────────────────────────────────────────────────
 const coinModal        = document.getElementById('coinModal');
 const coinModalClose   = document.getElementById('coinModalClose');
