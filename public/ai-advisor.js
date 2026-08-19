@@ -12,10 +12,15 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 export async function getTokenAnalysis(pair) {
   const riskData = calculateRiskScore(pair);
   const honeypot = checkHoneypot(pair);
-  const holders = await getTopHolders(pair.pairAddress, pair.chainId);
+  
+  let holders = null;
+  try {
+    holders = await getTopHolders(pair.pairAddress, pair.chainId);
+  } catch (e) {
+    console.warn('[AI] Could not get holders:', e);
+  }
 
-  const prompt = `
-Проанализируй этот мем-коин и дай честную оценку:
+  const prompt = `Проанализируй этот мем-коин и дай честную оценку:
 
 Токен: ${pair.baseToken?.symbol}
 Цена: $${pair.priceUsd}
@@ -36,11 +41,25 @@ Honeypot риск: ${honeypot.isHoneypot ? 'ВЫСОКИЙ' : 'нормальн�
 - Главные риски?
 - Когда может выстрелить?
 
-Будь честен - это не финансовый совет, а анализ рисков.
-  `;
+Будь честен - это не финансовый совет, а анализ рисков.`;
 
   try {
-    const analysis = await callGroqAPI(prompt);
+    // Используем серверный /api/chat endpoint
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const analysis = data.reply || 'Не удалось получить анализ.';
+
     return {
       success: true,
       analysis,
@@ -51,7 +70,7 @@ Honeypot риск: ${honeypot.isHoneypot ? 'ВЫСОКИЙ' : 'нормальн�
     console.error('[AIAdvisor] Error:', e);
     return {
       success: false,
-      analysis: 'Не смог получить анализ. Попробуй позже.',
+      analysis: `Не смог получить анализ. Попробуй позже.\n\nОшибка: ${e.message}`,
       error: e.message,
     };
   }
@@ -102,8 +121,7 @@ export async function getFOMOWarning(pair, portfolio) {
   const recentLosses = calculateRecentLosses(portfolio);
   const riskScore = calculateRiskScore(pair).score;
 
-  const prompt = `
-Пользователь хочет купить ${pair.baseToken?.symbol} по цене $${pair.priceUsd}.
+  const prompt = `Пользователь хочет купить ${pair.baseToken?.symbol} по цене $${pair.priceUsd}.
 
 Его последние торги показывают, что он потерял ~$${recentLosses} в последних 3 сделках.
 Риск скор этого токена: ${riskScore}/100.
@@ -113,12 +131,24 @@ export async function getFOMOWarning(pair, portfolio) {
 - Стоит ли рискнуть сейчас?
 - Какой максимум можно инвестировать?
 
-Основная цель - защитить от FOMO и плохих решений.
-  `;
+Основная цель - защитить от FOMO и плохих решений.`;
 
   try {
-    const advice = await callGroqAPI(prompt);
-    return advice;
+    // Используем серверный /api/chat endpoint
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.reply || 'Будь осторожен - проверь риск скор перед входом.';
   } catch (e) {
     console.error('[AIAdvisor] FOMO warning error:', e);
     return 'Будь осторожен - проверь риск скор перед входом.';
