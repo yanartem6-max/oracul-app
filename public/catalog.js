@@ -394,7 +394,10 @@ export async function initChart(pair) {
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
 
-    container.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">⏳ ${t('loading')}</div>`;
+    container.innerHTML = `<div class="chart-loading">
+      <div class="chart-loading-spinner"></div>
+      <div>${t('loading') || 'Загрузка графика...'}</div>
+    </div>`;
 
     if (allCandles[resolution]) {
       drawCanvas(container, allCandles[resolution]);
@@ -635,14 +638,20 @@ function noDataFallback(container, pair) {
   const chg = pair.priceChange?.h24;
   const isUp = (chg ?? 0) >= 0;
   container.innerHTML = `
-    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+    <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px">
+      <div style="font-size:32px">📊</div>
       <div style="font-size:26px;font-weight:700;color:${isUp ? '#22C55E' : '#EF4444'}">
         ${chg != null ? (isUp ? '+' : '') + Number(chg).toFixed(2) + '%' : '—'}
       </div>
-      <div style="font-size:12px;color:var(--ink-500)">изменение за 24h</div>
+      <div style="font-size:12px;color:var(--ink-3);text-align:center">
+        Изменение за 24ч<br/>
+        <span style="font-size:11px;opacity:0.7">График временно недоступен</span>
+      </div>
       ${pair.url ? `<a href="${pair.url}" target="_blank"
-        style="font-size:12px;color:var(--orange-600);margin-top:6px">
-        Полный график на DexScreener ↗</a>` : ''}
+        style="font-size:12px;color:var(--orange);margin-top:4px;text-decoration:none;border:1.5px solid var(--border);padding:6px 12px;border-radius:8px;transition:all 0.2s"
+        onmouseover="this.style.borderColor='var(--orange)'"
+        onmouseout="this.style.borderColor='var(--border)'">
+        Открыть на DexScreener ↗</a>` : ''}
     </div>`;
 }
 

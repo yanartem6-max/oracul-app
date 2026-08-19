@@ -447,10 +447,20 @@ app.get('/api/coins/:address', async (req, res) => {
   }
 });
 
-// ─── OHLCV для графика (GeckoTerminal) ───────────────────────────────────────
+// ─── OHLCV для графика (GeckoTerminal) с кешированием ─────────────────────────
+const candlesCache = new Map(); // кеш { key: { data, timestamp } }
+const CANDLES_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
 app.get('/api/candles/:pairAddress', async (req, res) => {
   const pairAddress = decodeURIComponent(req.params.pairAddress);
   const { chain = 'solana', res: resolution = '60' } = req.query;
+
+  // Проверяем кеш
+  const cacheKey = `${chain}:${pairAddress}:${resolution}`;
+  const cached = candlesCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < CANDLES_CACHE_TTL)) {
+    return res.json(cached.data);
+  }
 
   // Маппинг chainId DexScreener → network GeckoTerminal
   const chainMap = {
@@ -472,12 +482,12 @@ app.get('/api/candles/:pairAddress', async (req, res) => {
 
   try {
     const url = `https://api.geckoterminal.com/api/v2/networks/${network}/pools/${pairAddress}/ohlcv/${aggregate}?limit=${limit}&token=base`;
-    console.log('[candles] fetching:', url);
     const r = await fetch(url, {
       headers: {
         'Accept': 'application/json;version=20230302',
         'User-Agent': 'ORACUL/1.0',
-      }
+      },
+      signal: AbortSignal.timeout(10000) // 10 секунд timeout
     });
     if (!r.ok) throw new Error('geckoterminal ' + r.status);
     const data = await r.json();
@@ -494,8 +504,19 @@ app.get('/api/candles/:pairAddress', async (req, res) => {
       data.data.attributes.ohlcv_list = normalized;
     }
 
+    // Кешируем результат
+    candlesCache.set(cacheKey, { data, timestamp: Date.now() });
+    
+    // Очищаем старые записи из кеша (больше 10 минут)
+    for (const [key, value] of candlesCache.entries()) {
+      if (Date.now() - value.timestamp > 10 * 60 * 1000) {
+        candlesCache.delete(key);
+      }
+    }
+
     res.json(data);
   } catch (e) {
+    console.error('[candles] error:', e.message);
     res.status(502).json({ error: e.message });
   }
 });
