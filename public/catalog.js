@@ -343,6 +343,7 @@ export function renderCoinModal(pair) {
       <button class="chart-tab-btn" data-res="240">4H</button>
       <button class="chart-tab-btn active" data-res="1440">1D</button>
       <button class="chart-tab-btn" data-res="0">ALL</button>
+      <button class="chart-tab-btn" onclick="window.openFullscreenChart(window.lastSelectedPair)" style="margin-left:auto;background:var(--orange);color:#fff;border-color:var(--orange)" title="Развернуть график">⛶</button>
     </div>
     <div id="chartContainer" style="height:300px;border-radius:12px;overflow:hidden;margin-bottom:16px;background:rgba(255,138,61,.03);border:1px solid rgba(255,138,61,.12)">
       <div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">${t('loading') || '⏳'}</div>
@@ -391,26 +392,30 @@ export function renderCoinModal(pair) {
 }
 
 // ─── График — Canvas ──────────────────────────────────────────────────────────
-export async function initChart(pair) {
-  const container = document.getElementById('chartContainer');
+export async function initChart(pair, containerElement = null, isFullscreen = false, initialResolution = 1440) {
+  const container = containerElement || document.getElementById('chartContainer');
   if (!container) return;
 
   const chain    = pair.chainId    || 'solana';
   const pairAddr = pair.pairAddress || '';
 
-  // Сбрасываем стили от предыдущей версии с iframe
-  container.style.cssText = 'height:300px;border-radius:12px;overflow:hidden;margin-bottom:16px;background:rgba(255,138,61,.03);border:1px solid rgba(255,138,61,.12)';
+  // Устанавливаем размеры в зависимости от режима
+  if (isFullscreen) {
+    container.style.cssText = 'width:100%;height:100%;overflow:hidden;background:transparent';
+  } else {
+    container.style.cssText = 'height:300px;border-radius:12px;overflow:hidden;margin-bottom:16px;background:rgba(255,138,61,.03);border:1px solid rgba(255,138,61,.12)';
+  }
 
   if (!pairAddr) { noDataFallback(container, pair); return; }
 
   // Показываем кнопки таймфрейма
   const tabsEl = document.getElementById('chartTabsOld');
-  if (tabsEl) tabsEl.style.display = 'flex';
+  if (tabsEl && !isFullscreen) tabsEl.style.display = 'flex';
 
   let allCandles = {}; // кеш по таймфрейму
   let abortCtrl  = null;
 
-  async function load(resolution) {
+  async function load(resolution = initialResolution) {
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
 
@@ -420,7 +425,7 @@ export async function initChart(pair) {
     </div>`;
 
     if (allCandles[resolution]) {
-      drawCanvas(container, allCandles[resolution]);
+      drawCanvas(container, allCandles[resolution], isFullscreen);
       return;
     }
 
@@ -484,7 +489,7 @@ export async function initChart(pair) {
       }
 
       allCandles[resolution] = candles;
-      drawCanvas(container, candles);
+      drawCanvas(container, candles, isFullscreen);
     } catch (e) {
       if (e.name === 'AbortError') return;
       console.error('[Chart] Loading error:', e);
@@ -511,11 +516,11 @@ export async function initChart(pair) {
   }
 }
 
-function drawCanvas(container, candles) {
+function drawCanvas(container, candles, isFullscreen = false) {
   container.innerHTML = '';
   const n   = candles.length;
-  const W   = container.clientWidth  || 340;
-  const H   = container.clientHeight || 300;
+  const W   = container.clientWidth  || (isFullscreen ? window.innerWidth * 0.96 : 340);
+  const H   = container.clientHeight || (isFullscreen ? window.innerHeight * 0.8 : 300);
   const DPR = window.devicePixelRatio || 1;
   const PAD = { top: 20, right: 14, bottom: 34, left: 74 };
   const CW  = W - PAD.left - PAD.right;

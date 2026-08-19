@@ -3,7 +3,10 @@ import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=17';
 import { initWalletUI } from './wallet.js?v=16';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
-import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=16';
+import { initSettings, renderSettings, applyTranslations, t, onSettingsChange, fmtPrice } from './settings.js?v=16';
+
+// Делаем fmtPrice доступной глобально для HTML шаблонов
+window.fmtPrice = fmtPrice;
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;

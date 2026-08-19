@@ -217,7 +217,7 @@ export function renderAIAdvisorButtons(pair) {
       flex-wrap:wrap;
     ">
       <button 
-        onclick="window.requestAIAnalysis('${pair.pairAddress}')"
+        onclick="window.requestAIAnalysis('${pair.pairAddress}', this)"
         style="
           flex:1;
           min-width:120px;
@@ -237,7 +237,7 @@ export function renderAIAdvisorButtons(pair) {
         🤖 AI Анализ
       </button>
       <button 
-        onclick="window.requestFOMOAdvice('${pair.pairAddress}')"
+        onclick="window.requestFOMOAdvice('${pair.pairAddress}', this)"
         style="
           flex:1;
           min-width:120px;
@@ -261,55 +261,72 @@ export function renderAIAdvisorButtons(pair) {
 }
 
 // Глобальные функции для UI
-window.requestAIAnalysis = async (pairAddress) => {
+window.requestAIAnalysis = async (pairAddress, btn) => {
   const currentCoin = window.lastSelectedPair;
   if (!currentCoin || currentCoin.pairAddress !== pairAddress) {
-    console.error('[AI] currentCoin not set or address mismatch');
+    console.error('[AI] currentCoin not set or address mismatch', { pairAddress, current: currentCoin?.pairAddress });
+    alert('Ошибка: токен не загружен. Откройте модал снова.');
     return;
   }
 
-  const btn = event.target;
+  if (!btn) {
+    console.error('[AI] Button element not provided');
+    return;
+  }
+
+  const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Анализ...';
 
   try {
+    console.log('[AI] Starting analysis for:', currentCoin.baseToken?.symbol);
     const result = await getTokenAnalysis(currentCoin);
+    console.log('[AI] Analysis result:', result);
+    
     if (result.success) {
       showAIModal('🤖 AI Анализ токена', result.analysis);
     } else {
-      alert('Ошибка: ' + result.error);
+      alert('Ошибка: ' + (result.error || 'неизвестная ошибка'));
     }
   } catch (e) {
     console.error('[AI] Analysis error:', e);
-    alert('Ошибка при получении анализа');
+    alert('Ошибка при получении анализа: ' + e.message);
   }
 
   btn.disabled = false;
-  btn.textContent = '🤖 AI Анализ';
+  btn.textContent = originalText;
 };
 
-window.requestFOMOAdvice = async (pairAddress) => {
+window.requestFOMOAdvice = async (pairAddress, btn) => {
   const currentCoin = window.lastSelectedPair;
   if (!currentCoin || currentCoin.pairAddress !== pairAddress) {
     console.error('[FOMO] currentCoin not set or address mismatch');
+    alert('Ошибка: токен не загружен. Откройте модал снова.');
     return;
   }
 
-  const btn = event.target;
+  if (!btn) {
+    console.error('[FOMO] Button element not provided');
+    return;
+  }
+
+  const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Проверка...';
 
   try {
-    const { getPortfolio } = await import('./portfolio.js');
-    const portfolio = getPortfolio?.();
+    console.log('[FOMO] Starting FOMO check for:', currentCoin.baseToken?.symbol);
+    const portfolio = {}; // Пустой портфель если нет данных
     const advice = await getFOMOWarning(currentCoin, portfolio);
+    console.log('[FOMO] Advice result:', advice);
     showAIModal('⚠️ FOMO Проверка', advice);
   } catch (e) {
-    alert('Ошибка при проверке FOMO');
+    console.error('[FOMO] FOMO error:', e);
+    alert('Ошибка при проверке FOMO: ' + e.message);
   }
 
   btn.disabled = false;
-  btn.textContent = '⚠️ FOMO Check';
+  btn.textContent = originalText;
 };
 
 window.requestPortfolioAnalysis = async () => {
@@ -363,3 +380,149 @@ function showAIModal(title, content) {
   `;
   document.body.appendChild(modal);
 }
+
+
+/**
+ * Открыть график в полноэкранном режиме
+ */
+window.openFullscreenChart = async (pair) => {
+  if (!pair) {
+    alert('Токен не загружен');
+    return;
+  }
+
+  // Создаём модал для полноэкранного графика
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.style.zIndex = '11000';
+  modal.style.background = 'rgba(0,0,0,.95)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  
+  modal.innerHTML = `
+    <div style="
+      position: relative;
+      width: 96vw;
+      height: 90vh;
+      background: var(--surface);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+    ">
+      <!-- Закрыть -->
+      <button 
+        onclick="this.closest('.modal-overlay').remove()"
+        style="
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: var(--orange);
+          color: #fff;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          z-index: 1;
+          transition: background 0.2s;
+        "
+        onmouseover="this.style.background='var(--orange-dk)'"
+        onmouseout="this.style.background='var(--orange)'"
+      >
+        ✕
+      </button>
+
+      <!-- Заголовок -->
+      <div style="
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      ">
+        <div style="flex: 1">
+          <h2 style="font-size: 20px; font-weight: 700; margin: 0">
+            ${pair.baseToken?.name || '?'} · ${pair.baseToken?.symbol || '?'}
+          </h2>
+          <p style="font-size: 12px; color: var(--ink-3); margin: 4px 0 0">
+            ${(pair.chainId || '').toUpperCase()} • ${pair.pairAddress?.slice(-6).toUpperCase()}
+          </p>
+        </div>
+        <div style="text-align: right">
+          <div style="font-size: 18px; font-weight: 700">${window.fmtPrice?.(pair.priceUsd) || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Вкладки разрешений -->
+      <div style="
+        display: flex;
+        gap: 4px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+      ">
+        <button class="chart-tab-btn" data-res="60" onclick="window.reloadFullscreenChart(this, 60, '${pair.chainId}', '${pair.pairAddress}')">1H</button>
+        <button class="chart-tab-btn" data-res="240" onclick="window.reloadFullscreenChart(this, 240, '${pair.chainId}', '${pair.pairAddress}')">4H</button>
+        <button class="chart-tab-btn active" data-res="1440" onclick="window.reloadFullscreenChart(this, 1440, '${pair.chainId}', '${pair.pairAddress}')">1D</button>
+        <button class="chart-tab-btn" data-res="0" onclick="window.reloadFullscreenChart(this, 0, '${pair.chainId}', '${pair.pairAddress}')">ALL</button>
+      </div>
+
+      <!-- Контейнер графика -->
+      <div id="fullscreenChartContainer" style="
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        background: rgba(255,138,61,.01);
+      ">
+        <div style="
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--ink-3);
+          font-size: 14px;
+        ">
+          ⏳ Загрузка графика...
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Загружаем график
+  setTimeout(async () => {
+    const { initChart } = await import('./catalog.js?v=17');
+    await initChart(pair, document.getElementById('fullscreenChartContainer'), true);
+  }, 100);
+};
+
+/**
+ * Перезагрузить график при смене разрешения
+ */
+window.reloadFullscreenChart = async (btn, resolution, chainId, pairAddress) => {
+  // Обновляем активную кнопку
+  document.querySelectorAll('[data-res]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Загружаем новый график
+  const container = document.getElementById('fullscreenChartContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-3)">⏳</div>';
+
+  try {
+    const { initChart } = await import('./catalog.js?v=17');
+    const pair = window.lastSelectedPair;
+    if (pair) {
+      await initChart(pair, container, true, resolution);
+    }
+  } catch (e) {
+    console.error('[Fullscreen Chart] Error:', e);
+    container.innerHTML = '<div style="color:var(--red);padding:20px">Ошибка загрузки графика</div>';
+  }
+};
