@@ -165,7 +165,7 @@ export function updateCatalogBalance() {
     
     if (balanceTokens) {
       const tokenCount = walletTokens.length;
-      balanceTokens.textContent = `${(solBalance || 0).toFixed(2)} SOL + ${tokenCount} ${tokenCount === 1 ? 'токен' : 'токенов'}`;
+      balanceTokens.textContent = `${(solBalance || 0).toFixed(2)} SOL + ${tokenCount} ${tokenCount === 1 ? t('token_singular') : t('token_plural')}`;
     }
   }
 }
@@ -178,7 +178,7 @@ export function updateProfileBalance() {
 
   if (!connectedWallet) {
     profileAmount.textContent = '$0.00';
-    profileDetails.textContent = '0 SOL';
+    profileDetails.textContent = `0 SOL`;
     return;
   }
 
@@ -202,7 +202,7 @@ export function updateProfileBalance() {
     profileAmount.textContent = `$${totalValue.toFixed(2)}`;
     
     const tokenCount = walletTokens.length;
-    profileDetails.textContent = `${(solBalance || 0).toFixed(2)} SOL + ${tokenCount} ${tokenCount === 1 ? 'токен' : 'токенов'}`;
+    profileDetails.textContent = `${(solBalance || 0).toFixed(2)} SOL + ${tokenCount} ${tokenCount === 1 ? t('token_singular') : t('token_plural')}`;
   }
 }
 
@@ -349,10 +349,16 @@ export function initWalletUI() {
     }
   }
 
-  // При смене языка обновляем кнопку
+  // При смене языка обновляем UI
   onSettingsChange((key) => {
-    if (key === 'lang' && !connectedWallet) {
-      label.textContent = t('connect_wallet');
+    if (key === 'lang') {
+      if (!connectedWallet) {
+        label.textContent = t('connect_wallet');
+      } else {
+        // Если кошелёк подключен, перерендерим баланс с новым языком
+        updateCatalogBalance();
+        updateProfileBalance();
+      }
     }
   });
 
