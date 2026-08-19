@@ -1,10 +1,10 @@
 // ===== ORACUL — главный модуль =====
 import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=15';
-import { initWalletUI } from './wallet.js?v=15';
-import { initSwap } from './swap.js?v=15';
+import { initWalletUI } from './wallet.js?v=16';
+import { initSwap } from './swap.js?v=16';
 import { initCopyTrading } from './copytrading.js?v=15';
 import { initProfile } from './profile.js?v=15';
-import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=15';
+import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=16';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;

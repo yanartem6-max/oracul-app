@@ -1,8 +1,7 @@
 {
-  "url": "http://localhost:3000",
+  "url": "https://oracul.vercel.app",
   "name": "ORACUL",
-  "iconUrl": "http://localhost:3000/logo-new.svg",
-  "termsOfUseUrl": "http://localhost:3000",
-  "privacyPolicyUrl": "http://localhost:3000",
-  "platforms": ["iphone", "android", "windows", "macos", "linux"]
+  "iconUrl": "https://oracul.vercel.app/logo.png",
+  "termsOfUseUrl": "https://oracul.vercel.app",
+  "privacyPolicyUrl": "https://oracul.vercel.app"
 }

@@ -900,3 +900,130 @@ export default app;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => console.log(`[ORACUL] сервер запущен на порту ${PORT}`));
 }
+
+
+// ─── SYMBIOSIS CROSS-CHAIN SWAP (TON ↔ SOL) ──────────────────────────────────
+const SYMBIOSIS_API = 'https://api-v2.symbiosis.finance/crosschain/v1';
+const TON_CHAIN_ID = 607;
+const SOLANA_CHAIN_ID = 1399811150;
+
+// Адрес кошелька для получения комиссии (установить через env)
+const FEE_WALLET_TON = process.env.FEE_WALLET_TON || '';
+const FEE_PERCENT = parseFloat(process.env.FEE_PERCENT) || 0.5; // 0.5% комиссия по умолчанию
+
+if (!FEE_WALLET_TON) {
+  console.warn('[ORACUL] FEE_WALLET_TON не задан - комиссия не будет взиматься');
+}
+
+app.post('/api/swap/quote-cross-chain', async (req, res) => {
+  try {
+    const { tokenIn, tokenOut, amountIn, solAddress } = req.body;
+    
+    if (!tokenIn || !tokenOut || !amountIn) {
+      return res.status(400).json({ error: 'tokenIn, tokenOut, amountIn required' });
+    }
+
+    // Если свап на Solana но нет адреса
+    if (tokenOut.chain === 'solana' && !solAddress) {
+      return res.status(400).json({ error: 'Solana address required for cross-chain swap' });
+    }
+
+    // Формируем запрос к Symbiosis
+    const payload = {
+      tokenAmountIn: {
+        chainId: tokenIn.chainId,
+        address: tokenIn.symbiosisAddress || tokenIn.address,
+        amount: amountIn,
+        decimals: tokenIn.decimals,
+        symbol: tokenIn.symbol,
+      },
+      tokenOut: {
+        chainId: tokenOut.chainId,
+        address: tokenOut.symbiosisAddress || tokenOut.address,
+        decimals: tokenOut.decimals,
+        symbol: tokenOut.symbol,
+      },
+      from: req.body.userAddress || 'EQD...',  // Temporary, will be replaced
+      to: solAddress || req.body.userAddress || 'EQD...',
+      slippage: 100, // 1%
+    };
+
+    // Добавляем атрибуты для TON токенов
+    if (tokenIn.chain === 'ton' && tokenIn.address !== 'native') {
+      payload.tokenAmountIn.attributes = {
+        ton: tokenIn.address
+      };
+    }
+    
+    if (tokenOut.chain === 'ton' && tokenOut.address !== 'native') {
+      payload.tokenOut.attributes = {
+        ton: tokenOut.address
+      };
+    }
+
+    console.log('[Symbiosis] Quote request:', JSON.stringify(payload, null, 2));
+
+    const r = await fetch(`${SYMBIOSIS_API}/swap/quote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'ORACUL/1.0'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok) {
+      const errorText = await r.text();
+      console.error('[Symbiosis] Quote error:', errorText);
+      throw new Error(`Symbiosis API error: ${r.status}`);
+    }
+
+    const quote = await r.json();
+    console.log('[Symbiosis] Quote response:', quote);
+
+    // Рассчитываем комиссию
+    const amountOut = quote.tokenAmountOut?.amount || '0';
+    const feeAmount = Math.floor(parseInt(amountIn) * FEE_PERCENT / 100).toString();
+
+    res.json({
+      amountOut,
+      fee: `${FEE_PERCENT}%`,
+      feeAmount,
+      estimatedTime: quote.estimatedTime || '2-5 min',
+      route: quote.route,
+      raw: quote,
+    });
+  } catch (e) {
+    console.error('[Symbiosis] Quote error:', e);
+    res.status(502).json({ error: e.message });
+  }
+});
+
+app.post('/api/swap/execute-cross-chain', async (req, res) => {
+  try {
+    const { quote, userAddress, solAddress } = req.body;
+    
+    if (!quote || !userAddress) {
+      return res.status(400).json({ error: 'quote and userAddress required' });
+    }
+
+    // Для TON → SOL свапа возвращаем данные для TON транзакции
+    // В реальности нужно вызвать Symbiosis API для получения точных параметров
+    
+    const amountTon = parseFloat(quote.raw?.tokenAmountIn?.amount || '0') / 1e9;
+    
+    // Адрес Symbiosis контракта на TON (нужно узнать реальный)
+    const symbiosisContract = 'EQD...' + 'SymbiosisContract'; // Placeholder
+    
+    res.json({
+      toAddress: symbiosisContract,
+      amount: amountTon,
+      payload: '', // Symbiosis может требовать payload для смарт-контракта
+      destinationAddress: solAddress,
+      estimatedTime: quote.estimatedTime || '2-5 min',
+    });
+  } catch (e) {
+    console.error('[Symbiosis] Execute error:', e);
+    res.status(502).json({ error: e.message });
+  }
+});

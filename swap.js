@@ -1,34 +1,58 @@
-// swap.js — свап через Jupiter API (Solana), комиссия 0.5% идёт владельцу
+// swap.js — кросс-чейн свап TON ↔ SOL через Symbiosis API с комиссией
 
-import { getWallet, signAndSendTransaction, getWalletTokens, getSolBalance } from './wallet.js?v=15';
-import { getTonSwapQuote, getTonPrice, saveTonSwapHistory, TON_MINT, WSOL_MINT } from './ton-swap.js?v=15';
+import { getWallet, sendTonTransaction, getTonBalance } from './wallet.js?v=16';
+import { t } from './settings.js?v=5';
 
-// SOL mint address (нативный)
-export const SOL_MINT  = 'So11111111111111111111111111111111111111112';
-export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+// Chain IDs в Symbiosis
+const TON_CHAIN_ID = 607;
+const SOLANA_CHAIN_ID = 1399811150;
 
-// Популярные мем-коины на Solana (используется для пикера)
-export const POPULAR_MEME = [
-  { symbol: 'SOL',   name: 'Solana',    mint: SOL_MINT,  logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png', chain: 'solana' },
-  { symbol: 'BONK',  name: 'Bonk',      mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', logoUrl: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I', chain: 'solana' },
-  { symbol: 'WIF',   name: 'dogwifhat', mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', logoUrl: 'https://bafkreibk3covs5ltyqxa272uodhculbgn2zm52cx3r5nfgg4t32r3ndiyi.ipfs.nftstorage.link', chain: 'solana' },
-  { symbol: 'POPCAT',name: 'Popcat',    mint: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr', logoUrl: 'https://bafkreigtag6czn7xhvwmrmlkuuxwk2h3mxogyuoqn6hv7htfscpg5jhkdm.ipfs.nftstorage.link', chain: 'solana' },
-  { symbol: 'MOODENG',name:'Moo Deng', mint: 'ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzc8EU', logoUrl: '', chain: 'solana' },
-  { symbol: 'TON',   name: 'Toncoin',   mint: TON_MINT, logoUrl: 'https://wallet.ton.org/img/logo.png', chain: 'ton' },
-  { symbol: 'WSOL',  name: 'Wrapped SOL', mint: WSOL_MINT, logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png', chain: 'ton' },
+// Популярные токены для свапа
+export const POPULAR_TOKENS = [
+  { 
+    symbol: 'TON', 
+    name: 'Toncoin', 
+    address: 'native',
+    chainId: TON_CHAIN_ID,
+    decimals: 9,
+    logoUrl: 'https://assets.dedust.io/images/ton.webp',
+    chain: 'ton' 
+  },
+  { 
+    symbol: 'SOL', 
+    name: 'Solana', 
+    address: 'native',
+    chainId: SOLANA_CHAIN_ID,
+    decimals: 9,
+    logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    chain: 'solana' 
+  },
+  { 
+    symbol: 'USDT', 
+    name: 'Tether (TON)', 
+    address: 'EQCxE6mUtQJKFnP6aROTKOt1lZbDiX1kCixRv7Nw2Id_sDs0',
+    chainId: TON_CHAIN_ID,
+    decimals: 6,
+    logoUrl: 'https://assets.dedust.io/images/usdt.webp',
+    chain: 'ton',
+    symbiosisAddress: '0x9328ED75956C38a25f59028B146Fecd3621Dfe'
+  },
+  { 
+    symbol: 'USDC', 
+    name: 'USD Coin (Solana)', 
+    address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    chainId: SOLANA_CHAIN_ID,
+    decimals: 6,
+    logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    chain: 'solana',
+    symbiosisAddress: '0x0000000000000000000000000000000000000002'
+  },
 ];
 
-let swapTokenIn  = POPULAR_MEME[0]; // SOL по умолчанию
-let swapTokenOut = POPULAR_MEME[1]; // BONK по умолчанию
+let swapTokenIn  = POPULAR_TOKENS[0]; // TON по умолчанию
+let swapTokenOut = POPULAR_TOKENS[1]; // SOL по умолчанию
 let lastQuote    = null;
-
-function lamports(amount, decimals = 9) {
-  return Math.floor(parseFloat(amount) * Math.pow(10, decimals));
-}
-
-function humanAmount(raw, decimals = 9) {
-  return (Number(raw) / Math.pow(10, decimals)).toFixed(6);
-}
+let solanaAddressInput = ''; // Для получения SOL
 
 export function initSwap() {
   const amountInEl  = document.getElementById('swapAmountIn');
@@ -41,29 +65,67 @@ export function initSwap() {
   const updateBtnLabels = () => {
     pickInBtn.textContent  = swapTokenIn.symbol  + ' ▾';
     pickOutBtn.textContent = swapTokenOut.symbol + ' ▾';
-    // Показываем баланс входного токена
     updateBalanceHint();
+    updateSolAddressField();
   };
 
   function updateBalanceHint() {
-    const walletToks = getWalletTokens();
-    const sol        = getSolBalance();
-    let bal = null;
-    if (swapTokenIn.mint === 'So11111111111111111111111111111111111111112') {
-      bal = sol != null ? sol.toFixed(4) + ' SOL' : null;
-    } else {
-      const wt = walletToks.find(w => w.mint === swapTokenIn.mint);
-      bal = wt ? wt.amount.toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' ' + swapTokenIn.symbol : null;
-    }
+    const wallet = getWallet();
     let hint = document.getElementById('swapBalanceHint');
     if (!hint) {
       hint = document.createElement('div');
       hint.id = 'swapBalanceHint';
-      hint.style.cssText = 'font-size:12px;color:var(--ink-500);margin-bottom:6px;text-align:right';
-      amountInEl.parentElement.parentElement.insertBefore(hint, amountInEl.parentElement.parentElement.querySelector('.swap-input-row'));
+      hint.style.cssText = 'font-size:12px;color:var(--ink-3);margin-bottom:6px;text-align:right';
+      const inputRow = document.querySelector('.swap-input-row');
+      if (inputRow) {
+        inputRow.parentElement.insertBefore(hint, inputRow);
+      }
     }
-    hint.textContent = bal ? `${t('swap_receive')}: ${bal}` : '';
+    
+    if (wallet && swapTokenIn.chain === 'ton') {
+      const bal = getTonBalance();
+      hint.textContent = bal ? `${t('balance')}: ${bal.toFixed(4)} TON` : '';
+    } else {
+      hint.textContent = '';
+    }
   }
+
+  // Поле для ввода Solana адреса когда свапаем TO N → SOL
+  function updateSolAddressField() {
+    let solField = document.getElementById('swapSolAddressField');
+    
+    // Показываем только если свапаем НА Solana
+    if (swapTokenOut.chain === 'solana' && swapTokenIn.chain !== 'solana') {
+      if (!solField) {
+        solField = document.createElement('div');
+        solField.id = 'swapSolAddressField';
+        solField.style.cssText = 'margin-top:12px;padding:12px;background:var(--orange-lt);border-radius:var(--radius-sm);border-left:3px solid var(--orange)';
+        solField.innerHTML = `
+          <div style="font-size:12px;color:var(--ink-2);margin-bottom:6px;font-weight:600">
+            💡 ${t('sol_address_required') || 'Введите адрес Solana кошелька для получения'}
+          </div>
+          <input type="text" id="solAddressInput" placeholder="Solana address (e.g. 7x...abc)" 
+            style="width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);font-family:var(--mono);font-size:13px"
+            value="${solanaAddressInput}">
+        `;
+        const quoteBox = document.getElementById('swapQuoteBox');
+        if (quoteBox) {
+          quoteBox.parentElement.insertBefore(solField, quoteBox);
+        } else {
+          swapBtn.parentElement.insertBefore(solField, swapBtn);
+        }
+        
+        document.getElementById('solAddressInput').addEventListener('input', (e) => {
+          solanaAddressInput = e.target.value.trim();
+        });
+      }
+    } else {
+      if (solField) {
+        solField.remove();
+      }
+    }
+  }
+
   updateBtnLabels();
 
   // Открыть пикер
@@ -95,29 +157,30 @@ export function initSwap() {
     clearTimeout(quoteTimer);
     amountOutEl.value = '';
     lastQuote = null;
-    // Скрываем quote-box пока нет данных
     const quoteBox = document.getElementById('swapQuoteBox');
     if (quoteBox) quoteBox.style.display = 'none';
-    swapBtn.textContent = t('swap_get_quote');
+    swapBtn.textContent = t('swap_get_quote') || 'Получить котировку';
     statusEl.textContent = '';
 
     const val = parseFloat(amountInEl.value);
     if (!val || val <= 0) return;
-    // Показываем лоадер сразу
-    statusEl.textContent = '⏳ ' + t('swap_calculating');
-    quoteTimer = setTimeout(() => getQuote(val), 600);
+    statusEl.textContent = '⏳ ' + (t('swap_calculating') || 'Расчёт...');
+    quoteTimer = setTimeout(() => getQuote(val), 800);
   });
 
   swapBtn.addEventListener('click', async () => {
     const val = parseFloat(amountInEl.value);
-    if (!val || val <= 0) { statusEl.textContent = t('swap_enter_amount'); return; }
+    if (!val || val <= 0) { 
+      statusEl.textContent = t('swap_enter_amount') || 'Введите сумму'; 
+      return; 
+    }
 
     if (!lastQuote) {
-      // Сначала получить котировку
-      swapBtn.textContent = t('swap_loading');
+      // Получить котировку
+      swapBtn.textContent = t('swap_loading') || 'Загрузка...';
       swapBtn.disabled = true;
       await getQuote(val);
-      swapBtn.textContent = lastQuote ? t('swap_confirm') : t('swap_get_quote');
+      swapBtn.textContent = lastQuote ? (t('swap_confirm') || 'Подтвердить') : (t('swap_get_quote') || 'Получить котировку');
       swapBtn.disabled = false;
       return;
     }
@@ -125,148 +188,125 @@ export function initSwap() {
     // Есть котировка — выполнить свап
     const wallet = getWallet();
     if (!wallet) {
-      statusEl.textContent = '⚠️ ' + t('wallet_connect_first');
-      return;
-    }
-    
-    if (wallet.type === 'ton') {
-      // TON свапы через Ston.fi
-      if (swapTokenIn.chain === 'ton' && swapTokenOut.chain === 'ton') {
-        await executeTonSwap(wallet.address, statusEl, swapBtn);
-      } else {
-        statusEl.textContent = '⚠️ ' + t('swap_between_chains');
-      }
-      return;
-    }
-    
-    if (wallet.type !== 'phantom') {
-      statusEl.textContent = '⚠️ ' + t('swap_unknown_wallet');
+      statusEl.textContent = '⚠️ ' + (t('wallet_connect_first') || 'Подключите кошелёк');
       return;
     }
 
-    // Солана свапы через Jupiter
-    await executeSwap(wallet.address, statusEl, swapBtn);
+    // Проверка адреса Solana если свапаем на SOL
+    if (swapTokenOut.chain === 'solana' && swapTokenIn.chain !== 'solana') {
+      if (!solanaAddressInput || solanaAddressInput.length < 32) {
+        statusEl.textContent = '⚠️ ' + (t('sol_address_invalid') || 'Введите корректный Solana адрес');
+        return;
+      }
+    }
+
+    await executeSwap(wallet, statusEl, swapBtn);
   });
 
   async function getQuote(amount) {
-    statusEl.textContent = '⏳ ' + t('swap_loading');
+    statusEl.textContent = '⏳ ' + (t('swap_loading') || 'Загрузка...');
     try {
-      // Проверяем тип свапа
-      if (swapTokenIn.chain === 'ton' || swapTokenOut.chain === 'ton') {
-        // TON свап через Ston.fi
-        const res = await fetch('/api/ton/swap/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amountIn: Math.floor(amount * 1e9).toString(), // В нанотонах
-            tokenIn: swapTokenIn.mint,
-            tokenOut: swapTokenOut.mint,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
+      // Конвертируем amount в минимальные единицы
+      const amountIn = Math.floor(amount * Math.pow(10, swapTokenIn.decimals)).toString();
+
+      const res = await fetch('/api/swap/quote-cross-chain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenIn: swapTokenIn,
+          tokenOut: swapTokenOut,
+          amountIn: amountIn,
+          solAddress: solanaAddressInput || undefined,
+        }),
+      });
+      
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      lastQuote = data;
+      const outAmount = (parseFloat(data.amountOut) / Math.pow(10, swapTokenOut.decimals)).toFixed(6);
+      const rate = (parseFloat(outAmount) / amount).toFixed(6);
+
+      amountOutEl.value = outAmount;
+
+      const receiveLabel = document.getElementById('swapReceiveLabel');
+      if (receiveLabel) receiveLabel.textContent = `≈ ${outAmount} ${swapTokenOut.symbol}`;
+
+      const quoteBox = document.getElementById('swapQuoteBox');
+      if (quoteBox) {
+        quoteBox.style.display = 'block';
+        const qOut  = document.getElementById('swapQuoteOut');
+        const qRate = document.getElementById('swapQuoteRate');
+        const qFee  = document.getElementById('swapQuoteFee');
+        const qTime = document.getElementById('swapQuoteTime');
         
-        lastQuote = data;
-        const outAmount = (parseInt(data.amountOut || '0') / 1e9).toString();
-        const outFormatted = Number(outAmount).toLocaleString('ru', { maximumFractionDigits: 6 });
-        const rate = (Number(outAmount) / amount).toFixed(4);
-        const slippage = (data.slippage || 0.5).toFixed(1);
-
-        amountOutEl.value = outAmount;
-
-        const receiveLabel = document.getElementById('swapReceiveLabel');
-        if (receiveLabel) receiveLabel.textContent = `≈ ${outFormatted} ${swapTokenOut.symbol}`;
-
-        const quoteBox = document.getElementById('swapQuoteBox');
-        if (quoteBox) {
-          quoteBox.style.display = 'block';
-          const qOut  = document.getElementById('swapQuoteOut');
-          const qRate = document.getElementById('swapQuoteRate');
-          const qSlip = document.getElementById('swapQuoteSlippage');
-          if (qOut)  qOut.textContent  = `${outFormatted} ${swapTokenOut.symbol}`;
-          if (qRate) qRate.textContent = `1 ${swapTokenIn.symbol} = ${rate} ${swapTokenOut.symbol}`;
-          if (qSlip) qSlip.textContent = `${slippage}%`;
-        }
-
-        statusEl.textContent = `✓ Route: Ston.fi`;
-        statusEl.style.color = 'var(--green)';
-        swapBtn.textContent = `${t('swap_execute')} ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
-      } else {
-        // SOL свап через Jupiter
-        const amountLamports = lamports(amount, swapTokenIn.decimals ?? 9);
-        const res = await fetch('/api/swap/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            inputMint: swapTokenIn.mint,
-            outputMint: swapTokenOut.mint,
-            amount: amountLamports,
-            slippageBps: 100,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        lastQuote = data;
-
-        const outAmount   = humanAmount(data.outAmount, swapTokenOut.decimals ?? 9);
-        const outFormatted = Number(outAmount).toLocaleString('ru', { maximumFractionDigits: 6 });
-        const rate         = (Number(outAmount) / amount).toFixed(4);
-        const slippage     = (data.slippageBps / 100).toFixed(1);
-
-        amountOutEl.value = outAmount;
-
-        const receiveLabel = document.getElementById('swapReceiveLabel');
-        if (receiveLabel) receiveLabel.textContent = `≈ ${outFormatted} ${swapTokenOut.symbol}`;
-
-        const quoteBox = document.getElementById('swapQuoteBox');
-        if (quoteBox) {
-          quoteBox.style.display = 'block';
-          const qOut  = document.getElementById('swapQuoteOut');
-          const qRate = document.getElementById('swapQuoteRate');
-          const qSlip = document.getElementById('swapQuoteSlippage');
-          if (qOut)  qOut.textContent  = `${outFormatted} ${swapTokenOut.symbol}`;
-          if (qRate) qRate.textContent = `1 ${swapTokenIn.symbol} = ${rate} ${swapTokenOut.symbol}`;
-          if (qSlip) qSlip.textContent = `${slippage}%`;
-        }
-
-        const route = data.routePlan?.[0]?.swapInfo?.label || 'Jupiter';
-        statusEl.textContent = `✓ Route: ${route}`;
-        statusEl.style.color = 'var(--green)';
-        swapBtn.textContent = `${t('swap_execute')} ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
+        if (qOut)  qOut.textContent  = `${outAmount} ${swapTokenOut.symbol}`;
+        if (qRate) qRate.textContent = `1 ${swapTokenIn.symbol} = ${rate} ${swapTokenOut.symbol}`;
+        if (qFee)  qFee.textContent  = data.fee || '0.5%';
+        if (qTime) qTime.textContent = data.estimatedTime || '2-5 min';
       }
+
+      statusEl.textContent = `✓ ${t('swap_route') || 'Маршрут'}: Symbiosis (${swapTokenIn.symbol} → ${swapTokenOut.symbol})`;
+      statusEl.style.color = 'var(--green)';
+      swapBtn.textContent = t('swap_execute') || 'Выполнить обмен';
     } catch (e) {
+      console.error('[Swap] Quote error:', e);
       statusEl.textContent = '❌ ' + e.message;
       statusEl.style.color = 'var(--red)';
       lastQuote = null;
-      swapBtn.textContent = t('swap_get_quote');
+      swapBtn.textContent = t('swap_get_quote') || 'Получить котировку';
       const quoteBox = document.getElementById('swapQuoteBox');
       if (quoteBox) quoteBox.style.display = 'none';
     }
   }
 
-  async function executeSwap(userPublicKey, statusEl, swapBtn) {
+  async function executeSwap(wallet, statusEl, swapBtn) {
     swapBtn.disabled = true;
-    swapBtn.textContent = t('swap_preparing');
+    swapBtn.textContent = t('swap_preparing') || 'Подготовка...';
     statusEl.textContent = '';
+    
     try {
-      const res = await fetch('/api/swap/transaction', {
+      // Получаем транзакцию для подписи
+      const res = await fetch('/api/swap/execute-cross-chain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quoteResponse: lastQuote, userPublicKey }),
+        body: JSON.stringify({
+          quote: lastQuote,
+          userAddress: wallet.address,
+          solAddress: solanaAddressInput || undefined,
+        }),
       });
+      
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      swapBtn.textContent = t('swap_sign_wallet');
-      const sig = await signAndSendTransaction(data.swapTransaction);
-      statusEl.innerHTML = `✅ ${t('swap_done')} <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:var(--orange-600)">${t('swap_view_tx')}</a>`;
+      swapBtn.textContent = t('swap_sign_wallet') || 'Подпишите в кошельке';
+      
+      // Отправляем TON транзакцию
+      const txResult = await sendTonTransaction(
+        data.toAddress,
+        parseFloat(data.amount),
+        data.payload || ''
+      );
+
+      statusEl.innerHTML = `✅ ${t('swap_done') || 'Обмен выполнен!'}<br><small>${t('swap_processing') || 'Обработка займёт 2-5 минут'}</small>`;
+      statusEl.style.color = 'var(--green)';
+      
       amountInEl.value  = '';
       amountOutEl.value = '';
       lastQuote = null;
-      swapBtn.textContent = t('swap_get_quote');
+      swapBtn.textContent = t('swap_get_quote') || 'Получить котировку';
+      
+      // Обновляем баланс через 5 секунд
+      setTimeout(() => {
+        updateBalanceHint();
+      }, 5000);
+      
     } catch (e) {
+      console.error('[Swap] Execution error:', e);
       statusEl.textContent = '❌ ' + e.message;
-      swapBtn.textContent = t('swap_try_again');
+      statusEl.style.color = 'var(--red)';
+      swapBtn.textContent = t('swap_try_again') || 'Попробовать снова';
     } finally {
       swapBtn.disabled = false;
     }
@@ -281,40 +321,30 @@ function tokenPickerModal(current) {
     const searchEl = document.getElementById('tokenPickSearch');
     const closeBtn = document.getElementById('tokenPickClose');
 
+    if (!modal || !listEl) {
+      console.error('[Swap] Token picker modal not found');
+      resolve(null);
+      return;
+    }
+
     searchEl.value = '';
     renderTokenList('');
 
     function renderTokenList(query) {
       listEl.innerHTML = '';
-      const walletToks = getWalletTokens();
-      const sol        = getSolBalance();
+      const wallet = getWallet();
+      const tonBal = getTonBalance();
 
-      // Строим список: сначала токены из кошелька, потом популярные
-      const ownedMints = new Set(walletToks.map(t => t.mint));
-
-      // Добавляем SOL с балансом
-      const allTokens = [...POPULAR_MEME];
-
-      // Добавляем токены кошелька которых нет в списке
-      walletToks.forEach(wt => {
-        if (!allTokens.find(t => t.mint === wt.mint)) {
-          allTokens.push({ symbol: wt.mint.slice(0,4)+'…', name: 'Unknown', mint: wt.mint, logoUrl: '' });
-        }
-      });
-
-      const filtered = allTokens.filter(t =>
+      const filtered = POPULAR_TOKENS.filter(t =>
         t.symbol.toLowerCase().includes(query.toLowerCase()) ||
         t.name.toLowerCase().includes(query.toLowerCase())
       );
 
       filtered.forEach(t => {
-        // Баланс из кошелька
+        // Показываем баланс TON
         let balance = null;
-        if (t.mint === 'So11111111111111111111111111111111111111112') {
-          balance = sol != null ? sol.toFixed(4) + ' SOL' : null;
-        } else {
-          const wt = walletToks.find(w => w.mint === t.mint);
-          if (wt) balance = wt.amount.toLocaleString(undefined, { maximumFractionDigits: 4 });
+        if (wallet && t.chain === 'ton' && t.address === 'native') {
+          balance = tonBal ? `${tonBal.toFixed(4)} TON` : null;
         }
 
         const card = document.createElement('div');
@@ -329,11 +359,11 @@ function tokenPickerModal(current) {
           </div>
           <div class="coin-info">
             <div class="coin-name">${t.name}</div>
-            <div class="coin-chain">${t.symbol}</div>
+            <div class="coin-chain">${t.symbol} • ${t.chain.toUpperCase()}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             ${balance ? `<div style="font-size:13px;font-weight:600;font-family:var(--mono)">${balance}</div>` : ''}
-            ${t.mint === current.mint ? '<div style="color:var(--orange);font-size:13px;font-weight:700">✓</div>' : ''}
+            ${t.symbol === current.symbol && t.chain === current.chain ? '<div style="color:var(--orange);font-size:13px;font-weight:700">✓</div>' : ''}
           </div>
         `;
         card.addEventListener('click', () => { close(t); });
@@ -345,58 +375,10 @@ function tokenPickerModal(current) {
 
     function close(val) {
       modal.classList.remove('open');
-      searchEl.removeEventListener('input', renderTokenList);
-      closeBtn.removeEventListener('click', cancel);
       resolve(val);
     }
     const cancel = () => close(null);
     closeBtn.addEventListener('click', cancel);
     modal.classList.add('open');
   });
-}
-
-// TON свапы через Ston.fi
-async function executeTonSwap(userAddress, statusEl, swapBtn) {
-  swapBtn.disabled = true;
-  swapBtn.textContent = t('swap_initiated');
-  statusEl.textContent = t('swap_initiated');
-  
-  try {
-    // Здесь будет логика выполнения свопа через TON wallet
-    // Требуется интеграция с TON Connect для подписи транзакции
-    
-    const swapData = {
-      tokenIn: swapTokenIn.mint,
-      tokenOut: swapTokenOut.mint,
-      amountIn: parseFloat(amountInEl.value),
-      amountOut: parseFloat(amountOutEl.value),
-      timestamp: Date.now(),
-      status: 'pending',
-    };
-
-    // Сохраняем историю
-    saveTonSwapHistory(swapData);
-
-    statusEl.textContent = t('swap_recorded');
-    statusEl.style.color = 'var(--green)';
-    swapBtn.textContent = t('swap_completed');
-    
-    // Сбрасываем котировку
-    lastQuote = null;
-    amountInEl.value = '';
-    amountOutEl.value = '';
-    
-    setTimeout(() => {
-      swapBtn.disabled = false;
-      swapBtn.textContent = t('swap_get_quote');
-      statusEl.textContent = '';
-    }, 3000);
-    
-  } catch (e) {
-    console.error('Ошибка свопа:', e);
-    statusEl.textContent = t('swap_error') + e.message;
-    statusEl.style.color = 'var(--red)';
-    swapBtn.disabled = false;
-    swapBtn.textContent = t('swap_get_quote');
-  }
 }
