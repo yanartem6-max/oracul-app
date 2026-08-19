@@ -62,7 +62,7 @@ export function initSwap() {
       hint.style.cssText = 'font-size:12px;color:var(--ink-500);margin-bottom:6px;text-align:right';
       amountInEl.parentElement.parentElement.insertBefore(hint, amountInEl.parentElement.parentElement.querySelector('.swap-input-row'));
     }
-    hint.textContent = bal ? `Баланс: ${bal}` : '';
+    hint.textContent = bal ? `${t('swap_receive')}: ${bal}` : '';
   }
   updateBtnLabels();
 
@@ -117,7 +117,7 @@ export function initSwap() {
       swapBtn.textContent = t('swap_loading');
       swapBtn.disabled = true;
       await getQuote(val);
-      swapBtn.textContent = lastQuote ? 'Подтвердить свап' : 'Получить котировку';
+      swapBtn.textContent = lastQuote ? t('swap_confirm') : t('swap_get_quote');
       swapBtn.disabled = false;
       return;
     }
@@ -188,9 +188,9 @@ export function initSwap() {
           if (qSlip) qSlip.textContent = `${slippage}%`;
         }
 
-        statusEl.textContent = `✓ Маршрут: Ston.fi`;
+        statusEl.textContent = `✓ Route: Ston.fi`;
         statusEl.style.color = 'var(--green)';
-        swapBtn.textContent = `Свапнуть ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
+        swapBtn.textContent = `${t('swap_execute')} ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
       } else {
         // SOL свап через Jupiter
         const amountLamports = lamports(amount, swapTokenIn.decimals ?? 9);
@@ -230,9 +230,9 @@ export function initSwap() {
         }
 
         const route = data.routePlan?.[0]?.swapInfo?.label || 'Jupiter';
-        statusEl.textContent = `✓ Маршрут: ${route}`;
+        statusEl.textContent = `✓ Route: ${route}`;
         statusEl.style.color = 'var(--green)';
-        swapBtn.textContent = `Свапнуть ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
+        swapBtn.textContent = `${t('swap_execute')} ${amount} ${swapTokenIn.symbol} → ${outFormatted} ${swapTokenOut.symbol}`;
       }
     } catch (e) {
       statusEl.textContent = '❌ ' + e.message;
