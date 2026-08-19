@@ -8,6 +8,8 @@ import { renderWatchlistPage } from './watchlist.js';
 import { renderPortfolioPage } from './portfolio.js';
 import { renderSmartWalletsCard } from './smart-wallets.js';
 import { renderReferralPage } from './referral.js';
+import { renderSmartWalletsCard as renderWallets } from './smart-wallets.js';
+import { renderSybilAnalysis } from './sybil-detection.js';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
@@ -123,6 +125,14 @@ function openCoinModal(pair) {
       const walletsHtml = await renderSmartWalletsCard(pair);
       container.innerHTML = walletsHtml;
       container.style.display = 'block';
+    }
+
+    // Загружаем Sybil анализ
+    const sybilContainer = coinModalContent.querySelector('#sybilDetectionContainer');
+    if (sybilContainer) {
+      const sybilHtml = await renderSybilAnalysis(pair);
+      sybilContainer.innerHTML = sybilHtml;
+      sybilContainer.style.display = 'block';
     }
   }, 500);
 

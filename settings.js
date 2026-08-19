@@ -735,6 +735,32 @@ export function renderSettings() {
         </ul>
       </div>
     </div>
+
+    <!-- Cooldowns & Protection -->
+    <div class="settings-section">
+      <div class="settings-section-title">🛡️ Защита от FOMO</div>
+      <button 
+        onclick="window.showCooldownSettings()"
+        style="
+          width:100%;
+          padding:14px;
+          background:var(--surface);
+          border:1.5px solid var(--border);
+          border-radius:var(--radius);
+          font-size:13px;
+          font-weight:600;
+          cursor:pointer;
+          transition:all 0.2s;
+        "
+        onmouseover="this.style.borderColor='var(--orange)'"
+        onmouseout="this.style.borderColor='var(--border)'"
+      >
+        ⚙️ Настроить лимиты и cooldown-ы
+      </button>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:8px">
+        Установи ежедневные лимиты потерь и защиту от импульсивных сделок
+      </div>
+    </div>
   `;
 
   el.querySelector('#sRowLang').addEventListener('click', () => showPicker('lang'));
@@ -809,3 +835,21 @@ export function initSettings() {
   applyTheme(settings.theme);
   applyTranslations();
 }
+
+
+// Показать настройки cooldown-ов
+window.showCooldownSettings = async () => {
+  const { renderLimitSettings } = await import('./cooldown.js');
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.style.zIndex = '10000';
+  modal.innerHTML = `
+    <div class="modal-card" style="max-height:80vh;overflow-y:auto">
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:14px">🛡️ Защита от FOMO</h2>
+      ${renderLimitSettings()}
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
