@@ -6,6 +6,8 @@ import { initProfile } from './profile.js?v=15';
 import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=16';
 import { renderWatchlistPage } from './watchlist.js';
 import { renderPortfolioPage } from './portfolio.js';
+import { renderSmartWalletsCard } from './smart-wallets.js';
+import { renderReferralPage } from './referral.js';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
@@ -48,6 +50,7 @@ function showPage(pageId) {
   if (pageId === 'pageSettings') renderSettings();
   if (pageId === 'pageWatchlist') renderWatchlistPage();
   if (pageId === 'pagePortfolio') renderPortfolioPage();
+  if (pageId === 'pageReferral') renderReferralPage();
 }
 
 navBtns.forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
@@ -112,6 +115,16 @@ function openCoinModal(pair) {
   coinModalContent.innerHTML = renderCoinModal(pair);
   coinModal.classList.add('open');
   setTimeout(() => initChart(pair), 350);
+
+  // Загружаем Smart Wallets анализ асинхронно
+  setTimeout(async () => {
+    const container = coinModalContent.querySelector('#smartWalletsContainer');
+    if (container) {
+      const walletsHtml = await renderSmartWalletsCard(pair);
+      container.innerHTML = walletsHtml;
+      container.style.display = 'block';
+    }
+  }, 500);
 
   coinModalContent.querySelector('#modalBuyBtn')?.addEventListener('click', () => {
     closeCoinModal();

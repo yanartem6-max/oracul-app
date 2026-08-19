@@ -2,6 +2,7 @@
 import { fmtPrice, t, onSettingsChange } from './settings.js?v=15';
 import { renderRiskScore } from './risk-analyzer.js';
 import { renderWatchlistButton } from './watchlist.js';
+import { renderSmartWalletsCard } from './smart-wallets.js';
 
 export let currentCoin = null;
 
@@ -337,6 +338,8 @@ export function renderCoinModal(pair) {
     </div>
 
     ${renderRiskScore(pair)}
+
+    <div id="smartWalletsContainer" style="display:none"></div>
 
     <div class="modal-stat-grid">
       <div class="modal-stat">
