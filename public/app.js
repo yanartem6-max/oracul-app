@@ -1,5 +1,5 @@
 // ===== ORACUL — главный модуль =====
-import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=17';
+import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=18';
 import { initWalletUI } from './wallet.js?v=16';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
@@ -130,7 +130,18 @@ const coinModalContent = document.getElementById('coinModalContent');
 function openCoinModal(pair) {
   coinModalContent.innerHTML = renderCoinModal(pair);
   coinModal.classList.add('open');
-  setTimeout(() => initChart(pair), 350);
+  setTimeout(() => {
+    initChart(pair);
+    
+    // Добавляем обработчик для полноэкранной кнопки
+    const fullscreenBtn = document.getElementById('fullscreenChartBtn');
+    if (fullscreenBtn) {
+      fullscreenBtn.addEventListener('click', () => {
+        console.log('[Fullscreen] Opening fullscreen chart');
+        openFullscreenChart(pair);
+      });
+    }
+  }, 350);
 
   // Загружаем анализы асинхронно
   setTimeout(async () => {
@@ -140,7 +151,7 @@ function openCoinModal(pair) {
       const riskHtml = renderRiskScore(pair);
       
       // AI Buttons
-      const { renderAIAdvisorButtons } = await import('./ai-advisor.js?v=17');
+      const { renderAIAdvisorButtons, getTokenAnalysis, getFOMOWarning } = await import('./ai-advisor.js?v=18');
       const aiHtml = renderAIAdvisorButtons(pair);
       
       // Watchlist Button
@@ -150,6 +161,58 @@ function openCoinModal(pair) {
       const analysisContainer = coinModalContent.querySelector('#analysisContainer');
       if (analysisContainer) {
         analysisContainer.innerHTML = riskHtml + aiHtml;
+        
+        // Добавляем event listeners для AI кнопок
+        const aiBtn = analysisContainer.querySelector('#aiAnalysisBtn');
+        const fomoBtn = analysisContainer.querySelector('#fomoCheckBtn');
+        
+        if (aiBtn) {
+          aiBtn.addEventListener('click', async () => {
+            console.log('[AI Click] Button clicked');
+            const originalText = aiBtn.textContent;
+            aiBtn.disabled = true;
+            aiBtn.textContent = '⏳ Анализ...';
+            
+            try {
+              const result = await getTokenAnalysis(pair);
+              console.log('[AI] Result:', result);
+              
+              if (result.success) {
+                showAIModal('🤖 AI Анализ токена', result.analysis);
+              } else {
+                alert('Ошибка: ' + (result.error || 'неизвестная ошибка'));
+              }
+            } catch (e) {
+              console.error('[AI] Error:', e);
+              alert('Ошибка при получении анализа: ' + e.message);
+            }
+            
+            aiBtn.disabled = false;
+            aiBtn.textContent = originalText;
+          });
+        }
+        
+        if (fomoBtn) {
+          fomoBtn.addEventListener('click', async () => {
+            console.log('[FOMO Click] Button clicked');
+            const originalText = fomoBtn.textContent;
+            fomoBtn.disabled = true;
+            fomoBtn.textContent = '⏳ Проверка...';
+            
+            try {
+              const portfolio = {}; // Пустой портфель
+              const advice = await getFOMOWarning(pair, portfolio);
+              console.log('[FOMO] Advice:', advice);
+              showAIModal('⚠️ FOMO Проверка', advice);
+            } catch (e) {
+              console.error('[FOMO] Error:', e);
+              alert('Ошибка при проверке FOMO: ' + e.message);
+            }
+            
+            fomoBtn.disabled = false;
+            fomoBtn.textContent = originalText;
+          });
+        }
       }
       
       const watchlistContainer = coinModalContent.querySelector('#watchlistBtnContainer');
@@ -164,6 +227,51 @@ function openCoinModal(pair) {
         const walletsHtml = await renderSmartWalletsCard(pair);
         smartContainer.innerHTML = walletsHtml;
         smartContainer.style.display = 'block';
+      }
+
+      // Функция для показа AI модала
+      function showAIModal(title, content) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay open';
+        modal.style.zIndex = '10000';
+        modal.innerHTML = `
+          <div class="modal-card">
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            <h2 style="font-size:18px;font-weight:700;margin-bottom:14px">${title}</h2>
+            <div style="
+              background:var(--surface-2);
+              border:1.5px solid var(--border);
+              border-radius:12px;
+              padding:16px;
+              font-size:13px;
+              line-height:1.8;
+              color:var(--ink-2);
+              white-space:pre-wrap;
+              word-break:break-word;
+              max-height:60vh;
+              overflow-y:auto;
+            ">
+              ${content.replace(/\n/g, '<br/>')}
+            </div>
+            <button 
+              onclick="this.closest('.modal-overlay').remove()"
+              style="
+                width:100%;
+                margin-top:14px;
+                padding:10px;
+                border-radius:8px;
+                border:1.5px solid var(--orange);
+                background:transparent;
+                color:var(--orange);
+                font-weight:600;
+                cursor:pointer;
+              "
+            >
+              Закрыть
+            </button>
+          </div>
+        `;
+        document.body.appendChild(modal);
       }
 
       // Sybil Detection
@@ -337,3 +445,157 @@ onSettingsChange((key) => {
     addMessage('ai', `🎯 **ORACUL**\n\n${t('ai_greeting_help') || 'I can help you:'}\n- 📊 ${t('ai_help1') || 'Analyze meme coins and tokens'}\n- ⚠️ ${t('ai_help2') || 'Assess risks before buying'}\n- 🔮 ${t('ai_help3') || 'Understand DeFi and Solana'}\n- 💡 ${t('ai_help4') || 'Find interesting opportunities'}\n\n${t('ai_greeting_end') || 'Ask me about any coin or strategy 🚀'}\n\n${t('ai_disclaimer') || '⚠️ AI can make mistakes. Always double-check information!'}`);
   }
 });
+
+
+// ─── Полноэкранный график ──────────────────────────────────────────────────────
+async function openFullscreenChart(pair) {
+  if (!pair) {
+    alert('Токен не загружен');
+    return;
+  }
+
+  console.log('[Fullscreen] Creating fullscreen chart for:', pair.baseToken?.symbol);
+
+  // Создаём модал для полноэкранного графика
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.style.zIndex = '11000';
+  modal.style.background = 'rgba(0,0,0,.95)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  
+  modal.innerHTML = `
+    <div style="
+      position: relative;
+      width: 96vw;
+      max-width: 1200px;
+      height: 90vh;
+      background: var(--surface);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+    ">
+      <!-- Закрыть -->
+      <button 
+        class="fullscreen-close-btn"
+        style="
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: var(--orange);
+          color: #fff;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          z-index: 1;
+          transition: background 0.2s;
+        "
+      >
+        ✕
+      </button>
+
+      <!-- Заголовок -->
+      <div style="
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      ">
+        <div style="flex: 1">
+          <h2 style="font-size: 20px; font-weight: 700; margin: 0">
+            ${pair.baseToken?.name || '?'} · ${pair.baseToken?.symbol || '?'}
+          </h2>
+          <p style="font-size: 12px; color: var(--ink-3); margin: 4px 0 0">
+            ${(pair.chainId || '').toUpperCase()} • ${pair.pairAddress?.slice(-8).toUpperCase()}
+          </p>
+        </div>
+        <div style="text-align: right">
+          <div style="font-size: 18px; font-weight: 700; font-family: var(--mono)">${window.fmtPrice?.(pair.priceUsd) || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Вкладки разрешений -->
+      <div style="
+        display: flex;
+        gap: 4px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+      " class="fullscreen-chart-tabs">
+        <button class="chart-tab-btn" data-res="60">1H</button>
+        <button class="chart-tab-btn" data-res="240">4H</button>
+        <button class="chart-tab-btn active" data-res="1440">1D</button>
+        <button class="chart-tab-btn" data-res="0">ALL</button>
+      </div>
+
+      <!-- Контейнер графика -->
+      <div id="fullscreenChartContainer" style="
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        background: rgba(255,138,61,.01);
+      ">
+        <div style="
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--ink-3);
+          font-size: 14px;
+        ">
+          ⏳ Загрузка графика...
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Обработчик закрытия
+  const closeBtn = modal.querySelector('.fullscreen-close-btn');
+  closeBtn.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  // Загружаем график
+  setTimeout(async () => {
+    try {
+      const container = document.getElementById('fullscreenChartContainer');
+      if (container) {
+        console.log('[Fullscreen] Loading chart into container');
+        await initChart(pair, container, true, 1440);
+        
+        // Добавляем обработчики для кнопок разрешения
+        const tabBtns = modal.querySelectorAll('.chart-tab-btn[data-res]');
+        tabBtns.forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const resolution = parseInt(btn.dataset.res) || 1440;
+            console.log('[Fullscreen] Switching to resolution:', resolution);
+            
+            // Обновляем активную кнопку
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Перезагружаем график
+            container.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-3)">⏳</div>';
+            await initChart(pair, container, true, resolution);
+          });
+        });
+      }
+    } catch (e) {
+      console.error('[Fullscreen] Error loading chart:', e);
+      const container = document.getElementById('fullscreenChartContainer');
+      if (container) {
+        container.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center">Ошибка загрузки графика</div>';
+      }
+    }
+  }, 100);
+}

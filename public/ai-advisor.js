@@ -217,7 +217,8 @@ export function renderAIAdvisorButtons(pair) {
       flex-wrap:wrap;
     ">
       <button 
-        onclick="window.requestAIAnalysis('${pair.pairAddress}', this)"
+        id="aiAnalysisBtn"
+        data-pair="${pair.pairAddress}"
         style="
           flex:1;
           min-width:120px;
@@ -237,7 +238,8 @@ export function renderAIAdvisorButtons(pair) {
         🤖 AI Анализ
       </button>
       <button 
-        onclick="window.requestFOMOAdvice('${pair.pairAddress}', this)"
+        id="fomoCheckBtn"
+        data-pair="${pair.pairAddress}"
         style="
           flex:1;
           min-width:120px;

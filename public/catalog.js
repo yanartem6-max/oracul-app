@@ -343,7 +343,7 @@ export function renderCoinModal(pair) {
       <button class="chart-tab-btn" data-res="240">4H</button>
       <button class="chart-tab-btn active" data-res="1440">1D</button>
       <button class="chart-tab-btn" data-res="0">ALL</button>
-      <button class="chart-tab-btn" onclick="window.openFullscreenChart(window.lastSelectedPair)" style="margin-left:auto;background:var(--orange);color:#fff;border-color:var(--orange)" title="Развернуть график">⛶</button>
+      <button class="chart-tab-btn" id="fullscreenChartBtn" style="margin-left:auto;background:var(--orange);color:#fff;border-color:var(--orange)" title="Развернуть график">⛶</button>
     </div>
     <div id="chartContainer" style="height:300px;border-radius:12px;overflow:hidden;margin-bottom:16px;background:rgba(255,138,61,.03);border:1px solid rgba(255,138,61,.12)">
       <div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-500);font-size:13px">${t('loading') || '⏳'}</div>
