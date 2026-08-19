@@ -893,4 +893,10 @@ app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`[ORACUL] сервер запущен на порту ${PORT}`));
+// Export app for Vercel
+export default app;
+
+// Only listen when running locally (not on Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`[ORACUL] сервер запущен на порту ${PORT}`));
+}
