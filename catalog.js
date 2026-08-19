@@ -1,6 +1,7 @@
 // catalog.js — каталог мем-коинов с лого и графиками
 import { fmtPrice, t, onSettingsChange } from './settings.js?v=15';
 import { renderRiskScore } from './risk-analyzer.js';
+import { renderWatchlistButton } from './watchlist.js';
 
 export let currentCoin = null;
 
@@ -366,7 +367,10 @@ export function renderCoinModal(pair) {
       </div>
     </div>
 
-    <button class="primary-btn" id="modalBuyBtn" style="margin-bottom:10px">${t('modal_buy')} ${symbol}</button>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="primary-btn" id="modalBuyBtn" style="flex:1">${t('modal_buy')} ${symbol}</button>
+      ${renderWatchlistButton(pair)}
+    </div>
     ${pair.url ? `<a href="${pair.url}" target="_blank"
       style="display:block;text-align:center;font-size:13px;color:var(--orange-600);padding:4px 0">
       ${t('modal_open_dex')}</a>` : ''}

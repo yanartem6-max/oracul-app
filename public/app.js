@@ -4,6 +4,7 @@ import { initWalletUI } from './wallet.js?v=16';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
 import { initSettings, renderSettings, applyTranslations, t, onSettingsChange } from './settings.js?v=16';
+import { renderWatchlistPage } from './watchlist.js';
 
 // ─── Telegram WebApp ──────────────────────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
@@ -44,6 +45,7 @@ function showPage(pageId) {
   document.getElementById(pageId)?.classList.add('active');
   document.querySelector(`.nav-btn[data-page="${pageId}"]`)?.classList.add('active');
   if (pageId === 'pageSettings') renderSettings();
+  if (pageId === 'pageWatchlist') renderWatchlistPage();
 }
 
 navBtns.forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
