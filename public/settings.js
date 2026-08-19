@@ -6,6 +6,7 @@ const TRANSLATIONS = {
     // Навигация
     nav_catalog: 'Каталог', nav_swap: 'Свап',
     nav_ai: 'ИИ', nav_settings: 'Настройки', nav_profile: 'Профиль',
+    nav_portfolio: 'Портфель', nav_watchlist: 'Избранное', nav_referral: 'Рефералы',
     // TON Wallet
     ton_wallet_connected: 'TON кошелёк подключён',
     ton_wallet_info: 'Вы подключены через TON Connect. Теперь можете обменивать TON на другие токены.',
@@ -138,6 +139,7 @@ const TRANSLATIONS = {
   en: {
     nav_catalog: 'Catalog', nav_swap: 'Swap',
     nav_ai: 'AI', nav_settings: 'Settings', nav_profile: 'Profile',
+    nav_portfolio: 'Portfolio', nav_watchlist: 'Watchlist', nav_referral: 'Referrals',
     // TON Wallet
     ton_wallet_connected: 'TON wallet connected',
     ton_wallet_info: 'You are connected via TON Connect. You can now swap TON for other tokens.',
@@ -261,6 +263,7 @@ const TRANSLATIONS = {
   zh: {
     nav_catalog: '市场', nav_swap: '兑换',
     nav_ai: 'AI', nav_settings: '设置', nav_profile: '个人资料',
+    nav_portfolio: '投资组合', nav_watchlist: '收藏', nav_referral: '推荐',
     // TON Wallet
     ton_wallet_connected: 'TON钱包已连接',
     ton_wallet_info: '您已通过TON Connect连接。现在可以交换TON为其他代币。',
@@ -384,6 +387,7 @@ const TRANSLATIONS = {
   es: {
     nav_catalog: 'Catálogo', nav_swap: 'Swap',
     nav_ai: 'IA', nav_settings: 'Ajustes', nav_profile: 'Perfil',
+    nav_portfolio: 'Cartera', nav_watchlist: 'Favoritos', nav_referral: 'Referidos',
     // TON Wallet
     ton_wallet_connected: 'Billetera TON conectada',
     ton_wallet_info: 'Estás conectado a través de TON Connect. Ahora puedes intercambiar TON por otros tokens.',

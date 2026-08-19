@@ -326,13 +326,41 @@ window.showRiskDetails = (pairAddress) => {
   // Найдём pair в кеше
   import('./catalog.js').then(module => {
     const pair = module.currentCoin;
-    if (!pair) return;
+    if (!pair) {
+      alert('Ошибка: данные токена не загружены');
+      return;
+    }
 
     const riskData = calculateRiskScore(pair);
     const honeypotData = checkHoneypot(pair);
     const explanation = generateRiskExplanation(pair, riskData, honeypotData);
 
-    // Показываем в alert (позже можно сделать красивую модалку)
-    alert(explanation);
+    // Показываем красивый модал
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open';
+    modal.style.zIndex = '10000';
+    modal.innerHTML = `
+      <div class="modal-card" style="max-height:80vh;overflow-y:auto">
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        <h2 style="font-size:18px;font-weight:700;margin-bottom:14px">🛡️ Подробный анализ риска</h2>
+        <div style="
+          background:var(--surface-2);
+          border:1.5px solid var(--border);
+          border-radius:12px;
+          padding:16px;
+          font-size:13px;
+          line-height:1.8;
+          color:var(--ink-2);
+          white-space:pre-wrap;
+          word-break:break-word;
+        ">
+          ${explanation.replace(/\n/g, '<br/>')}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }).catch(e => {
+    console.error('[RiskDetails] Error:', e);
+    alert('Ошибка при загрузке анализа');
   });
 };

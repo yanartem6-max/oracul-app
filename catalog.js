@@ -146,7 +146,14 @@ function price(usdVal) {
 
 function fmtPct(p) {
   if (p == null) return null;
-  return (Number(p) >= 0 ? '+' : '') + Number(p).toFixed(2) + '%';
+  const num = Number(p);
+  
+  // Санитизация: если >1000% или <-99% - это ошибка в данных, показываем 0
+  if (Math.abs(num) > 1000) {
+    return '0.00%';
+  }
+  
+  return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
 }
 
 // ─── Карточка монеты ──────────────────────────────────────────────────────────
@@ -411,12 +418,39 @@ export async function initChart(pair) {
     }
 
     try {
-      const r = await fetch(
-        `/api/candles/${encodeURIComponent(pairAddr)}?chain=${encodeURIComponent(chain)}&res=${resolution}`,
-        { signal: abortCtrl.signal }
-      );
-      const data = await r.json();
-      if (data.error) throw new Error(data.error);
+      let data = null;
+      let retries = 3;
+      
+      // Retry логика
+      while (retries > 0) {
+        try {
+          const r = await fetch(
+            `/api/candles/${encodeURIComponent(pairAddr)}?chain=${encodeURIComponent(chain)}&res=${resolution}`,
+            { signal: abortCtrl.signal, timeout: 10000 }
+          );
+          
+          if (!r.ok) {
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Ждём 1сек перед retry
+              continue;
+            }
+            throw new Error(`HTTP ${r.status}`);
+          }
+          
+          data = await r.json();
+          break; // Успешно загрузили
+        } catch (e) {
+          retries--;
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            throw e;
+          }
+        }
+      }
+      
+      if (!data || data.error) throw new Error(data?.error || 'No data');
 
       const raw = data?.data?.attributes?.ohlcv_list || [];
       const candles = raw
@@ -424,7 +458,7 @@ export async function initChart(pair) {
           const a = Array.isArray(item) ? item : String(item).trim().split(/\s+/);
           return { t: +a[0], o: +a[1], h: +a[2], l: +a[3], c: +a[4] };
         })
-        .filter(c => c.t && c.h > 0)
+        .filter(c => c.t && c.h > 0 && c.o > 0)
         .sort((a, b) => a.t - b.t);
 
       if (!candles.length) { noDataFallback(container, pair); return; }
@@ -433,6 +467,7 @@ export async function initChart(pair) {
       drawCanvas(container, candles);
     } catch (e) {
       if (e.name === 'AbortError') return;
+      console.error('[Chart] Loading error:', e);
       noDataFallback(container, pair);
     }
   }
