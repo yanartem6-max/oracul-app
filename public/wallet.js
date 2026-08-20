@@ -95,7 +95,8 @@ async function fetchTonBalance(address) {
     const data = await response.json();
     
     if (data.ok && data.result) {
-      // Баланс в nanotons, конвертируем в TON (1 TON = 10^9 nanotons)
+      // Баланс в nanotons, конвертируем в GRAM (1 GRAM = 10^9 nanotons)
+      // TON и GRAM это одно и то же, просто разные названия
       tonBalance = parseInt(data.result) / 1e9;
       
       if (connectedWallet) {
@@ -105,7 +106,7 @@ async function fetchTonBalance(address) {
       updateCatalogBalance();
       updateProfileBalance();
       
-      console.log('[TON] баланс:', tonBalance, 'TON');
+      console.log('[TON] баланс:', tonBalance, 'GRAM (TON)');
     }
   } catch (e) {
     console.error('[TON] ошибка получения баланса:', e);
@@ -183,7 +184,7 @@ export function updateCatalogBalance() {
   const balanceTokens = document.getElementById('catalogBalanceTokens');
   
   if (balanceAmount) {
-    balanceAmount.textContent = `${tonBalance.toFixed(2)} TON`;
+    balanceAmount.textContent = `${tonBalance.toFixed(2)} GRAM`;
   }
   
   if (balanceTokens) {
@@ -198,12 +199,12 @@ export function updateProfileBalance() {
   if (!profileAmount || !profileDetails) return;
 
   if (!connectedWallet) {
-    profileAmount.textContent = '0 TON';
+    profileAmount.textContent = '0 GRAM';
     profileDetails.textContent = t('wallet_not_connected') || 'Кошелёк не подключён';
     return;
   }
 
-  profileAmount.textContent = `${tonBalance.toFixed(4)} TON`;
+  profileAmount.textContent = `${tonBalance.toFixed(4)} GRAM`;
   profileDetails.textContent = connectedWallet.address;
 }
 
@@ -272,9 +273,9 @@ export function renderWalletPanel() {
   panel.id = 'walletPanel';
   panel.className = 'wallet-panel open';
 
-  // Получаем примерную цену TON (можно добавить реальный API позже)
-  const tonPriceUsd = 5.5; // примерная цена, можно получать с CoinGecko
-  const balanceUsd = (tonBalance * tonPriceUsd).toFixed(2);
+  // Получаем примерную цену GRAM (TON) 
+  const gramPriceUsd = 5.5; // примерная цена, можно получать с CoinGecko
+  const balanceUsd = (tonBalance * gramPriceUsd).toFixed(2);
 
   panel.innerHTML = `
     <div class="wallet-panel-header">
@@ -290,18 +291,18 @@ export function renderWalletPanel() {
     <div class="wallet-sol-row">
       <span style="font-size:36px">💎</span>
       <div style="flex:1">
-        <div style="font-weight:700;font-size:18px;font-family:var(--mono)">${tonBalance.toFixed(4)} TON</div>
+        <div style="font-weight:700;font-size:18px;font-family:var(--mono)">${tonBalance.toFixed(4)} GRAM</div>
         <div style="font-size:11px;color:var(--ink-3);font-family:var(--mono)">${connectedWallet.address.slice(0, 8)}…${connectedWallet.address.slice(-6)}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:14px;font-weight:600;color:var(--ink-2)">$${balanceUsd}</div>
-        <div style="font-size:11px;color:var(--ink-3);margin-top:2px">1 TON ≈ $${tonPriceUsd}</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:2px">1 GRAM ≈ $${gramPriceUsd}</div>
       </div>
     </div>
     
     <div style="background:var(--orange-lt);border-radius:var(--radius-sm);padding:10px;margin:12px 0;border-left:3px solid var(--orange)">
       <div style="font-size:12px;color:var(--ink-2)">
-        💡 ${t('ton_wallet_info') || 'Вы подключены через TON Connect. Теперь можете обменивать TON на другие токены.'}
+        💡 ${t('ton_wallet_info') || 'Вы подключены через TON Connect. Используйте кошельки с поддержкой swap GRAM/TON → SOL (Tonkeeper, MyTonWallet).'}
       </div>
     </div>
     
@@ -324,14 +325,14 @@ export function hideWalletPanel() {
   document.getElementById('walletPanel')?.remove();
 }
 
-// ─── ОТПРАВКА TON ТРАНЗАКЦИИ ──────────────────────────────────────────────────
+// ─── ОТПРАВКА GRAM (TON) ТРАНЗАКЦИИ ───────────────────────────────────────────
 export async function sendTonTransaction(toAddress, amountTon, payload = '') {
   if (!tonConnectUI || !connectedWallet) {
     throw new Error('TON кошелёк не подключён');
   }
 
   try {
-    // Конвертируем TON в nanotons (1 TON = 10^9 nanotons)
+    // Конвертируем GRAM в nanotons (1 GRAM = 10^9 nanotons)
     const amountNano = Math.floor(amountTon * 1e9).toString();
 
     const transaction = {
