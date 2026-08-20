@@ -3,6 +3,11 @@ import { fmtPrice, t, onSettingsChange } from './settings.js?v=15';
 
 export let currentCoin = null;
 
+// Для использования в других модулях
+export function getCurrentCoin() {
+  return currentCoin;
+}
+
 // ─── Получить URL лого ────────────────────────────────────────────────────────
 
 // Захардкоженные лого для популярных токенов — 150+ топовых

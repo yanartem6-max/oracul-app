@@ -130,96 +130,93 @@ function convertAddressFormat(address) {
   return address;
 }
 
-// Конвертируем адрес из RAW формата (0:hex...) в user-friendly формат
-function convertToUserFriendlyAddress(address) {
-  // Если адрес уже в правильном формате (начинается с EQ или UQ), возвращаем как есть
-  if (address.startsWith('EQ') || address.startsWith('UQ')) {
-    return address;
-  }
-  
-  // Если адрес в RAW формате (0:hex или -1:hex), конвертируем
-  // Для простоты используем адрес как есть, т.к. toncenter принимает RAW формат
-  return address;
-}
-
 async function fetchGramBalance(address) {
   console.log('[GRAM] ═══════════════════════════════════════════════');
   console.log('[GRAM] fetchGramBalance ВЫЗВАН');
   console.log('[GRAM] Исходный адрес:', address);
-  console.log('[GRAM] Тип адреса:', typeof address);
+  console.log('[GRAM] Формат:', address.includes(':') ? 'RAW' : 'User-friendly');
   console.log('[GRAM] Текущий gramBalance:', gramBalance);
-  console.log('[GRAM] Текущий connectedWallet:', connectedWallet);
   console.log('[GRAM] ═══════════════════════════════════════════════');
   
   try {
-    // Конвертируем адрес в правильный формат
-    const userFriendlyAddress = convertToUserFriendlyAddress(address);
-    console.log('[GRAM] Адрес для запросов:', userFriendlyAddress);
+    // Используем адрес как есть для всех API
     console.log('[GRAM] Начинаем получение баланса');
     
-    // МЕТОД 1: Пробуем tonapi.io с публичным доступом (без Bearer токена)
+    // МЕТОД 1: tonapi.io напрямую с RAW адресом
     console.log('[GRAM] ───────────────────────────────────────────────');
-    console.log('[GRAM] МЕТОД 1: tonapi.io (публичный)');
+    console.log('[GRAM] МЕТОД 1: tonapi.io');
     try {
-      const tonapiUrl = `https://tonapi.io/v2/accounts/${address}/jettons`;
-      console.log('[GRAM] URL:', tonapiUrl);
+      // Пробуем оба формата адреса
+      const addresses = [address];
       
-      const response = await fetch(tonapiUrl);
-      console.log('[GRAM] tonapi.io response.status:', response.status);
+      // Если RAW формат, пробуем также без префикса
+      if (address.includes(':')) {
+        addresses.push(address.replace('0:', ''));
+      }
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[GRAM] tonapi.io данные:', data);
-        console.log('[GRAM] tonapi.io балансы:', data.balances);
+      for (const addr of addresses) {
+        const tonapiUrl = `https://tonapi.io/v2/accounts/${addr}/jettons`;
+        console.log('[GRAM] Пробуем URL:', tonapiUrl);
         
-        if (data && data.balances && data.balances.length > 0) {
-          console.log('[GRAM] Найдено токенов:', data.balances.length);
+        const response = await fetch(tonapiUrl);
+        console.log('[GRAM] tonapi.io response.status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[GRAM] tonapi.io данные получены');
+          console.log('[GRAM] Количество балансов:', data.balances?.length || 0);
           
-          // Выводим ВСЕ токены
-          for (let i = 0; i < data.balances.length; i++) {
-            const token = data.balances[i];
-            console.log(`[GRAM] Токен ${i}:`, {
-              symbol: token.jetton?.symbol,
-              name: token.jetton?.name,
-              balance: token.balance,
-              decimals: token.jetton?.decimals
-            });
-          }
-          
-          // Ищем GRAM
-          const gramToken = data.balances.find(token => {
-            const symbol = token.jetton?.symbol?.toUpperCase();
-            const name = token.jetton?.name?.toUpperCase();
-            return symbol === 'GRAM' || 
-                   symbol === '$GRAM' || 
-                   name?.includes('GRAM');
-          });
-          
-          if (gramToken) {
-            const decimals = gramToken.jetton?.decimals || 9;
-            gramBalance = parseFloat(gramToken.balance) / Math.pow(10, decimals);
+          if (data && data.balances && data.balances.length > 0) {
+            console.log('[GRAM] ✅ Найдено токенов:', data.balances.length);
             
-            console.log('[GRAM] ✅✅✅ НАЙДЕН (tonapi.io) ✅✅✅');
-            console.log('[GRAM] Баланс:', gramBalance, 'GRAM');
-            
-            await fetchGramPrice();
-            await fetchNativeTonBalance(address);
-            
-            if (connectedWallet) {
-              connectedWallet.balance = gramBalance;
-              connectedWallet.gramBalance = gramBalance;
-              connectedWallet.tonBalance = tonBalance;
+            // Выводим ВСЕ токены
+            for (let i = 0; i < data.balances.length; i++) {
+              const token = data.balances[i];
+              console.log(`[GRAM] Токен ${i}:`, {
+                symbol: token.jetton?.symbol,
+                name: token.jetton?.name,
+                balance: token.balance,
+                decimals: token.jetton?.decimals
+              });
             }
             
-            updateCatalogBalance();
-            updateProfileBalance();
-            console.log('[GRAM] ═══ УСПЕШНО (tonapi.io) ═══');
-            return;
+            // Ищем GRAM
+            const gramToken = data.balances.find(token => {
+              const symbol = token.jetton?.symbol?.toUpperCase();
+              const name = token.jetton?.name?.toUpperCase();
+              return symbol === 'GRAM' || 
+                     symbol === '$GRAM' || 
+                     name?.includes('GRAM');
+            });
+            
+            if (gramToken) {
+              const decimals = gramToken.jetton?.decimals || 9;
+              gramBalance = parseFloat(gramToken.balance) / Math.pow(10, decimals);
+              
+              console.log('[GRAM] ✅✅✅ НАЙДЕН (tonapi.io) ✅✅✅');
+              console.log('[GRAM] Баланс:', gramBalance, 'GRAM');
+              
+              await fetchGramPrice();
+              await fetchNativeTonBalance(address);
+              
+              if (connectedWallet) {
+                connectedWallet.balance = gramBalance;
+                connectedWallet.gramBalance = gramBalance;
+                connectedWallet.tonBalance = tonBalance;
+              }
+              
+              updateCatalogBalance();
+              updateProfileBalance();
+              console.log('[GRAM] ═══ УСПЕШНО (tonapi.io) ═══');
+              return;
+            } else {
+              console.log('[GRAM] ⚠️ GRAM не найден среди токенов с адресом', addr);
+            }
           } else {
-            console.log('[GRAM] ⚠️ GRAM не найден среди токенов');
+            console.log('[GRAM] ⚠️ Нет токенов с адресом', addr);
           }
         } else {
-          console.log('[GRAM] ⚠️ Нет токенов в ответе');
+          console.log('[GRAM] ⚠️ tonapi.io вернул статус', response.status, 'для адреса', addr);
         }
       }
     } catch (e) {

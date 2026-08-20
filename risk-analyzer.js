@@ -233,10 +233,16 @@ export function generateRiskExplanation(pair, riskData, honeypotData) {
   return explanation;
 }
 
+// Глобальная переменная для последнего текущего токена
+let lastSelectedPair = null;
+
 /**
  * Рендерит UI для риск-скора в модалке токена
  */
 export function renderRiskScore(pair) {
+  // Сохраняем для потом использования
+  lastSelectedPair = pair;
+  
   const riskData = calculateRiskScore(pair);
   const honeypotData = checkHoneypot(pair);
   
@@ -299,7 +305,7 @@ export function renderRiskScore(pair) {
 
       <button 
         class="risk-details-btn"
-        onclick="window.showRiskDetails('${pair.pairAddress}')"
+        onclick="window.showRiskDetails()"
         style="
           width:100%;
           padding:10px;
@@ -322,45 +328,40 @@ export function renderRiskScore(pair) {
 }
 
 // Глобальная функция для показа деталей риска
-window.showRiskDetails = (pairAddress) => {
-  // Найдём pair в кеше
-  import('./catalog.js').then(module => {
-    const pair = module.currentCoin;
-    if (!pair) {
-      alert('Ошибка: данные токена не загружены');
-      return;
-    }
+window.showRiskDetails = () => {
+  // Используем локально сохранённый pair
+  if (!lastSelectedPair) {
+    alert('Ошибка: данные токена не загружены. Откройте модалку токена заново.');
+    return;
+  }
 
-    const riskData = calculateRiskScore(pair);
-    const honeypotData = checkHoneypot(pair);
-    const explanation = generateRiskExplanation(pair, riskData, honeypotData);
+  const pair = lastSelectedPair;
+  const riskData = calculateRiskScore(pair);
+  const honeypotData = checkHoneypot(pair);
+  const explanation = generateRiskExplanation(pair, riskData, honeypotData);
 
-    // Показываем красивый модал
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay open';
-    modal.style.zIndex = '10000';
-    modal.innerHTML = `
-      <div class="modal-card" style="max-height:80vh;overflow-y:auto">
-        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
-        <h2 style="font-size:18px;font-weight:700;margin-bottom:14px">🛡️ Подробный анализ риска</h2>
-        <div style="
-          background:var(--surface-2);
-          border:1.5px solid var(--border);
-          border-radius:12px;
-          padding:16px;
-          font-size:13px;
-          line-height:1.8;
-          color:var(--ink-2);
-          white-space:pre-wrap;
-          word-break:break-word;
-        ">
-          ${explanation.replace(/\n/g, '<br/>')}
-        </div>
+  // Показываем красивый модал
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.style.zIndex = '10000';
+  modal.innerHTML = `
+    <div class="modal-card" style="max-height:80vh;overflow-y:auto">
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:14px">🛡️ Подробный анализ риска</h2>
+      <div style="
+        background:var(--surface-2);
+        border:1.5px solid var(--border);
+        border-radius:12px;
+        padding:16px;
+        font-size:13px;
+        line-height:1.8;
+        color:var(--ink-2);
+        white-space:pre-wrap;
+        word-break:break-word;
+      ">
+        ${explanation.replace(/\n/g, '<br/>')}
       </div>
-    `;
-    document.body.appendChild(modal);
-  }).catch(e => {
-    console.error('[RiskDetails] Error:', e);
-    alert('Ошибка при загрузке анализа');
-  });
+    </div>
+  `;
+  document.body.appendChild(modal);
 };
