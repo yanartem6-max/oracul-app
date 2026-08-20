@@ -110,154 +110,125 @@ const GRAM_CONTRACTS = [
   'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c', // Альтернативный
 ];
 
+// Конвертируем адрес из RAW формата (0:hex...) в user-friendly формат
+function convertToUserFriendlyAddress(address) {
+  // Если адрес уже в правильном формате (начинается с EQ или UQ), возвращаем как есть
+  if (address.startsWith('EQ') || address.startsWith('UQ')) {
+    return address;
+  }
+  
+  // Если адрес в RAW формате (0:hex или -1:hex), конвертируем
+  // Для простоты используем адрес как есть, т.к. toncenter принимает RAW формат
+  return address;
+}
+
 async function fetchGramBalance(address) {
   console.log('[GRAM] ═══════════════════════════════════════════════');
   console.log('[GRAM] fetchGramBalance ВЫЗВАН');
-  console.log('[GRAM] Адрес кошелька:', address);
+  console.log('[GRAM] Исходный адрес:', address);
+  console.log('[GRAM] Тип адреса:', typeof address);
   console.log('[GRAM] Текущий gramBalance:', gramBalance);
   console.log('[GRAM] Текущий connectedWallet:', connectedWallet);
   console.log('[GRAM] ═══════════════════════════════════════════════');
   
   try {
-    console.log('[GRAM] Начинаем получение баланса для:', address);
+    // Конвертируем адрес в правильный формат
+    const userFriendlyAddress = convertToUserFriendlyAddress(address);
+    console.log('[GRAM] Адрес для запросов:', userFriendlyAddress);
+    console.log('[GRAM] Начинаем получение баланса');
     
-    // МЕТОД 1: Пробуем через tonapi.io v2
-    console.log('[GRAM] МЕТОД 1: Запрос к tonapi.io');
-    console.log('[GRAM] URL:', `https://tonapi.io/v2/accounts/${address}/jettons`);
+    // МЕТОД 1: Используем toncenter API (работает с RAW адресами)
+    console.log('[GRAM] МЕТОД 1: Запрос к toncenter');
+    console.log('[GRAM] URL:', `https://toncenter.com/api/v3/jetton/wallets?owner_address=${address}&limit=100`);
     
     try {
-      console.log('[GRAM] Отправляем fetch запрос...');
-      const response = await fetch(`https://tonapi.io/v2/accounts/${address}/jettons`, {
-        headers: {
-          'Authorization': 'Bearer AFgifdzobgo3CQAAAAAAAFLJBQVDQG5ON6VKXYPUQH3WHQDHG2GSMYKR5SXVGMJUNL3SIQQ'
-        }
-      });
+      console.log('[GRAM] Отправляем fetch запрос к toncenter...');
+      const response = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${address}&limit=100`);
       
-      console.log('[GRAM] tonapi.io response.status:', response.status);
-      console.log('[GRAM] tonapi.io response.ok:', response.ok);
+      console.log('[GRAM] toncenter response.status:', response.status);
+      console.log('[GRAM] toncenter response.ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('[GRAM] tonapi.io ПОЛНЫЙ ответ:', JSON.stringify(data, null, 2));
-        console.log('[GRAM] tonapi.io data.balances:', data.balances);
+        console.log('[GRAM] toncenter ПОЛНЫЙ ответ:', JSON.stringify(data, null, 2));
+        console.log('[GRAM] toncenter data.jetton_wallets:', data.jetton_wallets);
+        console.log('[GRAM] Количество jetton_wallets:', data.jetton_wallets?.length);
         
-        if (data && data.balances && data.balances.length > 0) {
-          console.log('[GRAM] tonapi.io нашёл токены, количество:', data.balances.length);
+        if (data && data.jetton_wallets && data.jetton_wallets.length > 0) {
+          console.log('[GRAM] toncenter нашёл jetton_wallets, количество:', data.jetton_wallets.length);
           
-          // Ищем GRAM по символу или адресу
-          const gramToken = data.balances.find(token => {
-            const symbol = token.jetton?.symbol?.toUpperCase();
-            const tokenAddress = token.jetton?.address;
-            
-            console.log('[GRAM] Проверяем токен:', {
-              symbol: symbol,
-              address: tokenAddress,
-              balance: token.balance
+          // Выводим все найденные токены для отладки
+          for (let i = 0; i < data.jetton_wallets.length; i++) {
+            const wallet = data.jetton_wallets[i];
+            console.log(`[GRAM] Токен ${i}:`, {
+              jetton: wallet.jetton,
+              balance: wallet.balance,
+              owner: wallet.owner
             });
             
-            return symbol === 'GRAM' || 
-                   GRAM_CONTRACTS.includes(tokenAddress);
-          });
-          
-          console.log('[GRAM] Результат поиска GRAM токена:', gramToken);
-          
-          if (gramToken) {
-            const decimals = gramToken.jetton?.decimals || 9;
-            gramBalance = parseFloat(gramToken.balance) / Math.pow(10, decimals);
-            
-            console.log('[GRAM] ✅ НАЙДЕН через tonapi.io:', gramBalance, 'GRAM');
-            console.log('[GRAM] Decimals:', decimals);
-            console.log('[GRAM] Raw balance:', gramToken.balance);
-            
-            // Получаем курс GRAM
-            await fetchGramPrice();
-            
-            // Также получаем нативный TON
-            await fetchNativeTonBalance(address);
-            
-            if (connectedWallet) {
-              connectedWallet.balance = gramBalance;
-              connectedWallet.gramBalance = gramBalance;
-              connectedWallet.tonBalance = tonBalance;
+            // Получаем метаданные для каждого токена
+            try {
+              const jettonInfoUrl = `https://toncenter.com/api/v3/jetton/masters?address=${wallet.jetton}`;
+              console.log(`[GRAM] Запрашиваем метаданные для токена ${i}:`, jettonInfoUrl);
+              
+              const jettonInfoResponse = await fetch(jettonInfoUrl);
+              const jettonInfo = await jettonInfoResponse.json();
+              console.log(`[GRAM] Метаданные токена ${i}:`, jettonInfo);
+              
+              if (jettonInfo && jettonInfo.jetton_masters && jettonInfo.jetton_masters[0]) {
+                const master = jettonInfo.jetton_masters[0];
+                const symbol = master.jetton_content?.symbol;
+                const name = master.jetton_content?.name;
+                
+                console.log(`[GRAM] Токен ${i} - символ: "${symbol}", имя: "${name}"`);
+                
+                // Проверяем различные варианты названия GRAM
+                if (symbol && (
+                  symbol.toUpperCase() === 'GRAM' ||
+                  symbol.toUpperCase() === '$GRAM' ||
+                  name?.toUpperCase().includes('GRAM')
+                )) {
+                  const decimals = master.jetton_content?.decimals || 9;
+                  gramBalance = parseFloat(wallet.balance) / Math.pow(10, decimals);
+                  
+                  console.log('[GRAM] ✅✅✅ НАЙДЕН ЧЕРЕЗ TONCENTER ✅✅✅');
+                  console.log('[GRAM] Баланс:', gramBalance, 'GRAM');
+                  console.log('[GRAM] Decimals:', decimals);
+                  console.log('[GRAM] Raw balance:', wallet.balance);
+                  
+                  await fetchGramPrice();
+                  await fetchNativeTonBalance(address);
+                  
+                  if (connectedWallet) {
+                    connectedWallet.balance = gramBalance;
+                    connectedWallet.gramBalance = gramBalance;
+                    connectedWallet.tonBalance = tonBalance;
+                  }
+                  
+                  console.log('[GRAM] Обновляем UI...');
+                  updateCatalogBalance();
+                  updateProfileBalance();
+                  console.log('[GRAM] ═══ УСПЕШНО ЗАВЕРШЕНО (toncenter) ═══');
+                  return;
+                }
+              }
+            } catch (e) {
+              console.error(`[GRAM] Ошибка получения метаданных для токена ${i}:`, e);
             }
-            
-            console.log('[GRAM] Обновляем UI...');
-            updateCatalogBalance();
-            updateProfileBalance();
-            console.log('[GRAM] ═══ УСПЕШНО ЗАВЕРШЕНО (tonapi.io) ═══');
-            return;
-          } else {
-            console.log('[GRAM] ⚠️ GRAM токен НЕ НАЙДЕН в списке токенов');
           }
+          
+          console.log('[GRAM] ⚠️ GRAM токен НЕ НАЙДЕН среди', data.jetton_wallets.length, 'токенов');
         } else {
-          console.log('[GRAM] ⚠️ data.balances пуст или отсутствует');
+          console.log('[GRAM] ⚠️ data.jetton_wallets пуст или отсутствует');
+          console.log('[GRAM] Возможно в кошельке нет jetton токенов');
         }
       } else {
-        console.log('[GRAM] ❌ tonapi.io вернул ошибку, status:', response.status);
+        console.log('[GRAM] ❌ toncenter вернул ошибку, status:', response.status);
         const errorText = await response.text();
         console.log('[GRAM] Текст ошибки:', errorText);
       }
     } catch (e) {
-      console.error('[GRAM] ❌ tonapi.io ИСКЛЮЧЕНИЕ:', e);
-      console.error('[GRAM] Стек ошибки:', e.stack);
-    }
-    
-    // МЕТОД 2: Пробуем через toncenter API v3
-    console.log('[GRAM] ───────────────────────────────────────────────');
-    console.log('[GRAM] МЕТОД 2: Запрос к toncenter v3');
-    try {
-      console.log('[GRAM] toncenter v3 URL:', `https://toncenter.com/api/v3/jetton/wallets?owner_address=${address}&limit=100`);
-      const response = await fetch(`https://toncenter.com/api/v3/jetton/wallets?owner_address=${address}&limit=100`);
-      
-      console.log('[GRAM] toncenter v3 response.status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[GRAM] toncenter v3 ПОЛНЫЙ ответ:', JSON.stringify(data, null, 2));
-        
-        if (data && data.jetton_wallets) {
-          console.log('[GRAM] toncenter v3 нашёл jetton_wallets, количество:', data.jetton_wallets.length);
-          
-          // Ищем GRAM среди jetton wallets
-          for (const wallet of data.jetton_wallets) {
-            console.log('[GRAM] Проверяем jetton wallet:', wallet);
-            
-            // Нужно получить метаданные jetton для проверки символа
-            const jettonInfoUrl = `https://toncenter.com/api/v3/jetton/masters?address=${wallet.jetton}`;
-            console.log('[GRAM] Запрашиваем метаданные:', jettonInfoUrl);
-            
-            const jettonInfo = await fetch(jettonInfoUrl).then(r => r.json());
-            console.log('[GRAM] Метаданные jetton:', jettonInfo);
-            
-            if (jettonInfo && jettonInfo.jetton_masters && jettonInfo.jetton_masters[0]) {
-              const metadata = jettonInfo.jetton_masters[0].jetton_content;
-              console.log('[GRAM] Метаданные контента:', metadata);
-              
-              if (metadata?.symbol?.toUpperCase() === 'GRAM') {
-                gramBalance = parseFloat(wallet.balance) / 1e9;
-                console.log('[GRAM] ✅ НАЙДЕН через toncenter:', gramBalance, 'GRAM');
-                
-                await fetchGramPrice();
-                await fetchNativeTonBalance(address);
-                
-                if (connectedWallet) {
-                  connectedWallet.balance = gramBalance;
-                  connectedWallet.gramBalance = gramBalance;
-                  connectedWallet.tonBalance = tonBalance;
-                }
-                
-                console.log('[GRAM] Обновляем UI...');
-                updateCatalogBalance();
-                updateProfileBalance();
-                console.log('[GRAM] ═══ УСПЕШНО ЗАВЕРШЕНО (toncenter) ═══');
-                return;
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error('[GRAM] ❌ toncenter v3 ИСКЛЮЧЕНИЕ:', e);
+      console.error('[GRAM] ❌ toncenter ИСКЛЮЧЕНИЕ:', e);
       console.error('[GRAM] Стек ошибки:', e.stack);
     }
     
