@@ -4,10 +4,13 @@ import { loadTonConnectUI } from './tonconnect-loader.js';
 
 let tonConnectUI = null;
 let connectedWallet = null; // { type: 'ton', address, balance }
-let tonBalance = 0;
+let tonBalance = 0; // Нативный TON (для газа)
+let gramBalance = 0; // GRAM токен (основной)
+let gramPriceUsd = 0; // Курс GRAM в USD
 
 export function getWallet() { return connectedWallet; }
 export function getTonBalance() { return tonBalance; }
+export function getGramBalance() { return gramBalance; }
 
 // ─── ЛОКАЛЬНОЕ ХРАНИЛИЩЕ ──────────────────────────────────────────────────────
 const WALLET_STORAGE_KEY = 'oracul_ton_wallet';
@@ -69,11 +72,12 @@ async function initTonConnect() {
         
         // Обновляем UI
         updateWalletUI();
-        fetchTonBalance(address);
+        fetchGramBalance(address); // Получаем баланс GRAM токена
       } else {
         console.log('[TON Connect] отключён');
         connectedWallet = null;
         tonBalance = 0;
+        gramBalance = 0;
         saveWalletToStorage();
         updateWalletUI();
       }
@@ -87,29 +91,105 @@ async function initTonConnect() {
   }
 }
 
-// ─── БАЛАНС TON ───────────────────────────────────────────────────────────────
-async function fetchTonBalance(address) {
+// ─── БАЛАНС GRAM ТОКЕНА ───────────────────────────────────────────────────────
+// GRAM - это отдельный Jetton токен в сети TON, не нативный TON
+const GRAM_CONTRACT = 'EQBDanbCeUqI4_v7HXq8to7mOcWCzd8R0S0fcLC5-OS_jUva'; // GRAM Jetton master contract
+
+async function fetchGramBalance(address) {
   try {
-    // Используем публичный TON API
+    // Получаем баланс GRAM токена через TON API
+    const response = await fetch(`https://tonapi.io/v2/accounts/${address}/jettons`);
+    const data = await response.json();
+    
+    if (data && data.balances) {
+      // Ищем GRAM токен в списке Jettons
+      const gramToken = data.balances.find(token => 
+        token.jetton?.address === GRAM_CONTRACT ||
+        token.jetton?.symbol?.toUpperCase() === 'GRAM'
+      );
+      
+      if (gramToken) {
+        // Баланс в минимальных единицах, конвертируем (обычно 9 decimals для GRAM)
+        const decimals = gramToken.jetton?.decimals || 9;
+        gramBalance = parseFloat(gramToken.balance) / Math.pow(10, decimals);
+        
+        console.log('[GRAM] баланс:', gramBalance, 'GRAM');
+      } else {
+        // Если GRAM не найден, баланс 0
+        gramBalance = 0;
+        console.log('[GRAM] токен не найден в кошельке');
+      }
+    }
+    
+    // Получаем курс GRAM
+    await fetchGramPrice();
+    
+    // Также получаем нативный TON для информации
+    await fetchNativeTonBalance(address);
+    
+    if (connectedWallet) {
+      connectedWallet.balance = gramBalance;
+      connectedWallet.gramBalance = gramBalance;
+      connectedWallet.tonBalance = tonBalance;
+    }
+    
+    updateCatalogBalance();
+    updateProfileBalance();
+  } catch (e) {
+    console.error('[GRAM] ошибка получения баланса:', e);
+    // Fallback: пробуем альтернативный метод
+    await fetchGramBalanceFallback(address);
+  }
+}
+
+// Альтернативный метод через toncenter
+async function fetchGramBalanceFallback(address) {
+  try {
+    const response = await fetch(`https://toncenter.com/api/v2/getTokenData?address=${GRAM_CONTRACT}`);
+    const data = await response.json();
+    
+    // Это упрощённый fallback, показываем 0 если не удалось
+    gramBalance = 0;
+    console.log('[GRAM] Fallback: не удалось получить баланс GRAM');
+  } catch (e) {
+    console.error('[GRAM] Fallback error:', e);
+  }
+}
+
+// Получаем нативный TON баланс (для газа)
+async function fetchNativeTonBalance(address) {
+  try {
     const response = await fetch(`https://toncenter.com/api/v2/getAddressBalance?address=${address}`);
     const data = await response.json();
     
     if (data.ok && data.result) {
-      // Баланс в nanotons, конвертируем в GRAM (1 GRAM = 10^9 nanotons)
-      // TON и GRAM это одно и то же, просто разные названия
+      // Нативный TON (для газа)
       tonBalance = parseInt(data.result) / 1e9;
-      
-      if (connectedWallet) {
-        connectedWallet.balance = tonBalance;
-      }
-      
-      updateCatalogBalance();
-      updateProfileBalance();
-      
-      console.log('[TON] баланс:', tonBalance, 'GRAM (TON)');
+      console.log('[TON] нативный баланс (для газа):', tonBalance, 'TON');
     }
   } catch (e) {
-    console.error('[TON] ошибка получения баланса:', e);
+    console.error('[TON] ошибка получения нативного баланса:', e);
+  }
+}
+
+// Получаем курс GRAM
+async function fetchGramPrice() {
+  try {
+    // Пробуем получить цену GRAM с CoinGecko или другого источника
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=gram&vs_currencies=usd');
+    const data = await response.json();
+    
+    if (data && data.gram && data.gram.usd) {
+      gramPriceUsd = data.gram.usd;
+      console.log('[GRAM] курс:', gramPriceUsd, 'USD');
+    } else {
+      // Fallback: примерный курс GRAM
+      gramPriceUsd = 0.05; // примерно $0.05, нужно обновить актуальным
+      console.log('[GRAM] используем примерный курс:', gramPriceUsd, 'USD');
+    }
+  } catch (e) {
+    console.error('[GRAM] ошибка получения курса:', e);
+    gramPriceUsd = 0.05; // fallback
   }
 }
 
@@ -142,6 +222,8 @@ export async function disconnectWallet() {
   
   connectedWallet = null;
   tonBalance = 0;
+  gramBalance = 0;
+  gramPriceUsd = 0;
   saveWalletToStorage();
   updateWalletUI();
 }
@@ -184,7 +266,7 @@ export function updateCatalogBalance() {
   const balanceTokens = document.getElementById('catalogBalanceTokens');
   
   if (balanceAmount) {
-    balanceAmount.textContent = `${tonBalance.toFixed(2)} GRAM`;
+    balanceAmount.textContent = `${gramBalance.toFixed(2)} GRAM`;
   }
   
   if (balanceTokens) {
@@ -204,7 +286,7 @@ export function updateProfileBalance() {
     return;
   }
 
-  profileAmount.textContent = `${tonBalance.toFixed(4)} GRAM`;
+  profileAmount.textContent = `${gramBalance.toFixed(4)} GRAM`;
   profileDetails.textContent = connectedWallet.address;
 }
 
@@ -229,7 +311,7 @@ export async function initWalletUI() {
         balance: 0,
       };
       updateWalletUI();
-      fetchTonBalance(currentWallet.account.address);
+      fetchGramBalance(currentWallet.account.address);
     }
   }
 
@@ -249,7 +331,7 @@ export async function initWalletUI() {
         panel.classList.toggle('open');
         return;
       }
-      await fetchTonBalance(connectedWallet.address);
+      await fetchGramBalance(connectedWallet.address);
       renderWalletPanel();
     } else {
       // Если не подключён - открываем модальное окно подключения
@@ -260,7 +342,7 @@ export async function initWalletUI() {
   // Периодически обновляем баланс каждые 30 секунд
   setInterval(async () => {
     if (connectedWallet) {
-      await fetchTonBalance(connectedWallet.address);
+      await fetchGramBalance(connectedWallet.address);
     }
   }, 30000);
 }
@@ -273,9 +355,9 @@ export function renderWalletPanel() {
   panel.id = 'walletPanel';
   panel.className = 'wallet-panel open';
 
-  // Получаем примерную цену GRAM (TON) 
-  const gramPriceUsd = 5.5; // примерная цена, можно получать с CoinGecko
-  const balanceUsd = (tonBalance * gramPriceUsd).toFixed(2);
+  // Рассчитываем USD стоимость GRAM
+  const balanceUsd = (gramBalance * gramPriceUsd).toFixed(2);
+  const tonBalanceUsd = (tonBalance * 5.5).toFixed(2); // TON примерно $5.5
 
   panel.innerHTML = `
     <div class="wallet-panel-header">
@@ -291,18 +373,32 @@ export function renderWalletPanel() {
     <div class="wallet-sol-row">
       <span style="font-size:36px">💎</span>
       <div style="flex:1">
-        <div style="font-weight:700;font-size:18px;font-family:var(--mono)">${tonBalance.toFixed(4)} GRAM</div>
+        <div style="font-weight:700;font-size:18px;font-family:var(--mono)">${gramBalance.toFixed(4)} GRAM</div>
         <div style="font-size:11px;color:var(--ink-3);font-family:var(--mono)">${connectedWallet.address.slice(0, 8)}…${connectedWallet.address.slice(-6)}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:14px;font-weight:600;color:var(--ink-2)">$${balanceUsd}</div>
-        <div style="font-size:11px;color:var(--ink-3);margin-top:2px">1 GRAM ≈ $${gramPriceUsd}</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:2px">1 GRAM ≈ $${gramPriceUsd.toFixed(4)}</div>
       </div>
     </div>
     
+    ${tonBalance > 0 ? `
+    <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px;margin:8px 0;border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:12px;color:var(--ink-3)">TON (для газа)</div>
+          <div style="font-weight:600;font-size:14px;font-family:var(--mono)">${tonBalance.toFixed(4)} TON</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;color:var(--ink-2)">$${tonBalanceUsd}</div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+    
     <div style="background:var(--orange-lt);border-radius:var(--radius-sm);padding:10px;margin:12px 0;border-left:3px solid var(--orange)">
       <div style="font-size:12px;color:var(--ink-2)">
-        💡 ${t('ton_wallet_info') || 'Вы подключены через TON Connect. Используйте кошельки с поддержкой swap GRAM/TON → SOL (Tonkeeper, MyTonWallet).'}
+        💡 ${t('ton_wallet_info') || 'GRAM - отдельный токен в сети TON. Используйте Tonkeeper или MyTonWallet для swap GRAM → SOL.'}
       </div>
     </div>
     
