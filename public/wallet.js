@@ -75,6 +75,14 @@ async function initTonConnect() {
         console.log('[TON Connect] Адрес (использую):', address);
         console.log('[TON Connect] Формат адреса:', address.includes(':') ? 'RAW (0:hex)' : 'User-friendly (EQ/UQ)');
         
+        // ВАЖНО: Выводим ссылки для ручной проверки
+        console.log('[TON Connect] ═══════════════════════════════════════');
+        console.log('[TON Connect] 🔍 ПРОВЕРЬТЕ АДРЕС ВРУЧНУЮ:');
+        console.log('[TON Connect] TON Viewer:', `https://tonviewer.com/${address}`);
+        console.log('[TON Connect] TON.app:', `https://ton.app/address/${address}`);
+        console.log('[TON Connect] Getgems:', `https://getgems.io/user/${address}`);
+        console.log('[TON Connect] ═══════════════════════════════════════');
+        
         connectedWallet = {
           type: 'ton',
           address: address,
@@ -326,6 +334,17 @@ async function fetchGramBalance(address) {
     console.log('[GRAM] 1. В кошельке действительно нет GRAM токенов');
     console.log('[GRAM] 2. GRAM называется по-другому в этом кошельке');
     console.log('[GRAM] 3. Используется другой токен вместо GRAM');
+    console.log('[GRAM] 4. API не видят этот конкретный GRAM токен');
+    console.log('[GRAM] 5. Адрес кошелька неправильный (subwallet или derivation path)');
+    console.log('[GRAM] ');
+    console.log('[GRAM] 🔍 РУЧНАЯ ПРОВЕРКА:');
+    console.log('[GRAM] Откройте эти ссылки в браузере и проверьте есть ли GRAM:');
+    console.log('[GRAM] - https://tonviewer.com/' + address);
+    console.log('[GRAM] - https://ton.app/address/' + address);
+    console.log('[GRAM] ');
+    console.log('[GRAM] Если там есть GRAM токен, скопируйте его contract address');
+    console.log('[GRAM] и добавьте в GRAM_CONTRACTS массив в wallet.js');
+    console.log('[GRAM] ');
     console.log('[GRAM] Устанавливаем gramBalance = 0');
     gramBalance = 0;
     
