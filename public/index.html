@@ -6,8 +6,6 @@
 <title>ORACUL</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@ton/ton@13.11.2/dist/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tonconnect/ui@2.0.6/dist/tonconnect-ui.min.js"></script>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -36,10 +34,6 @@
         </div>
         <span class="logo-text">ORACUL</span>
       </div>
-      <button class="wallet-btn" id="walletBtn">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M16 14a1 1 0 1 1 2 0 1 1 0 0 1-2 0z" fill="currentColor"/><path d="M6 7V5a4 4 0 0 1 8 0v2" stroke="currentColor" stroke-width="1.8"/></svg>
-        <span id="walletLabel" data-i18n="connect_wallet">Подключить</span>
-      </button>
     </header>
 
     <!-- Контент -->
@@ -47,13 +41,6 @@
 
       <!-- ── КАТАЛОГ ────────────────────────────────────────────────────── -->
       <div class="page active" id="pageCatalog">
-        <!-- Баланс кошелька над вкладками -->
-        <div id="catalogBalance" style="display:none;background:linear-gradient(135deg,var(--orange),#ff8c42);border-radius:12px;padding:16px;margin-bottom:12px;color:#fff">
-          <div style="font-size:13px;opacity:0.9;margin-bottom:4px" data-i18n="wallet_balance">Баланс кошелька</div>
-          <div style="font-size:28px;font-weight:700;font-family:var(--mono)" id="catalogBalanceAmount">$0.00</div>
-          <div style="font-size:12px;opacity:0.85;margin-top:6px" id="catalogBalanceTokens">SOL + токены</div>
-        </div>
-
         <div class="section-tabs">
           <button class="tab-btn active" data-tab="trending" data-i18n="tab_trending">Trending</button>
           <button class="tab-btn" data-tab="gainers" data-i18n="tab_gainers">Растут</button>

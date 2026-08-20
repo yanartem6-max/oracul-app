@@ -1,6 +1,5 @@
 // ===== ORACUL — главный модуль =====
 import { initCatalog, renderCoinModal, initChart } from './catalog.js?v=18';
-import { initWalletUI } from './wallet.js?v=100';
 import { initSwap } from './swap.js?v=16';
 import { initProfile } from './profile.js?v=15';
 import { initSettings, renderSettings, applyTranslations, t, onSettingsChange, fmtPrice } from './settings.js?v=16';
@@ -405,7 +404,6 @@ inputEl.addEventListener('input', () => {
 });
 
 // ─── Инициализация ────────────────────────────────────────────────────────────
-initWalletUI();
 initCatalog(openCoinModal);
 initSwap();
 initProfile();
