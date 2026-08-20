@@ -62,12 +62,18 @@ async function initTonConnect() {
     tonConnectUI.onStatusChange((wallet) => {
       console.log('[TON Connect] ═══════════════════════════════════════');
       console.log('[TON Connect] onStatusChange ВЫЗВАН');
-      console.log('[TON Connect] wallet объект:', wallet);
+      console.log('[TON Connect] ПОЛНЫЙ wallet объект:', JSON.stringify(wallet, null, 2));
       
       if (wallet) {
+        console.log('[TON Connect] wallet.account:', wallet.account);
+        console.log('[TON Connect] wallet.account.address:', wallet.account.address);
+        console.log('[TON Connect] wallet.account.publicKey:', wallet.account.publicKey);
+        console.log('[TON Connect] wallet.account.chain:', wallet.account.chain);
+        
         const address = wallet.account.address;
         console.log('[TON Connect] Кошелёк подключён!');
-        console.log('[TON Connect] Адрес:', address);
+        console.log('[TON Connect] Адрес (использую):', address);
+        console.log('[TON Connect] Формат адреса:', address.includes(':') ? 'RAW (0:hex)' : 'User-friendly (EQ/UQ)');
         
         connectedWallet = {
           type: 'ton',
@@ -104,11 +110,25 @@ async function initTonConnect() {
 
 // ─── БАЛАНС GRAM ТОКЕНА ───────────────────────────────────────────────────────
 // GRAM - это отдельный Jetton токен в сети TON, не нативный TON
-// Возможные contract addresses для GRAM:
+// Известные contract addresses для GRAM токена
 const GRAM_CONTRACTS = [
-  'EQBDanbCeUqI4_v7HXq8to7mOcWCzd8R0S0fcLC5-OS_jUva', // Основной
+  'EQBDanbCeUqI4_v7HXq8to7mOcWCzd8R0S0fcLC5-OS_jUva', // Основной GRAM контракт
   'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c', // Альтернативный
+  'EQCKt2WPGX-fh0cIAz38Ljd_OKQjoZE_cqk7QrYGsNP6wfn0', // Gram Wallet официальный
+  'EQBlqsm144Dq6SjbPI4jjZvA1hqTIP3CvHovbIfW_t-SCALE', // Gram на DeDust
 ];
+
+// Известные символы для поиска
+const GRAM_SYMBOLS = ['GRAM', '$GRAM', 'GRАM', 'Gram'];
+
+// Конвертируем адрес из RAW формата в user-friendly если нужно
+function convertAddressFormat(address) {
+  // Если адрес в формате 0:hex, пробуем найти его в разных форматах
+  if (address.includes(':')) {
+    return address; // toncenter работает с raw форматом
+  }
+  return address;
+}
 
 // Конвертируем адрес из RAW формата (0:hex...) в user-friendly формат
 function convertToUserFriendlyAddress(address) {
@@ -137,8 +157,78 @@ async function fetchGramBalance(address) {
     console.log('[GRAM] Адрес для запросов:', userFriendlyAddress);
     console.log('[GRAM] Начинаем получение баланса');
     
-    // МЕТОД 1: Используем toncenter API (работает с RAW адресами)
-    console.log('[GRAM] МЕТОД 1: Запрос к toncenter');
+    // МЕТОД 1: Пробуем tonapi.io с публичным доступом (без Bearer токена)
+    console.log('[GRAM] ───────────────────────────────────────────────');
+    console.log('[GRAM] МЕТОД 1: tonapi.io (публичный)');
+    try {
+      const tonapiUrl = `https://tonapi.io/v2/accounts/${address}/jettons`;
+      console.log('[GRAM] URL:', tonapiUrl);
+      
+      const response = await fetch(tonapiUrl);
+      console.log('[GRAM] tonapi.io response.status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[GRAM] tonapi.io данные:', data);
+        console.log('[GRAM] tonapi.io балансы:', data.balances);
+        
+        if (data && data.balances && data.balances.length > 0) {
+          console.log('[GRAM] Найдено токенов:', data.balances.length);
+          
+          // Выводим ВСЕ токены
+          for (let i = 0; i < data.balances.length; i++) {
+            const token = data.balances[i];
+            console.log(`[GRAM] Токен ${i}:`, {
+              symbol: token.jetton?.symbol,
+              name: token.jetton?.name,
+              balance: token.balance,
+              decimals: token.jetton?.decimals
+            });
+          }
+          
+          // Ищем GRAM
+          const gramToken = data.balances.find(token => {
+            const symbol = token.jetton?.symbol?.toUpperCase();
+            const name = token.jetton?.name?.toUpperCase();
+            return symbol === 'GRAM' || 
+                   symbol === '$GRAM' || 
+                   name?.includes('GRAM');
+          });
+          
+          if (gramToken) {
+            const decimals = gramToken.jetton?.decimals || 9;
+            gramBalance = parseFloat(gramToken.balance) / Math.pow(10, decimals);
+            
+            console.log('[GRAM] ✅✅✅ НАЙДЕН (tonapi.io) ✅✅✅');
+            console.log('[GRAM] Баланс:', gramBalance, 'GRAM');
+            
+            await fetchGramPrice();
+            await fetchNativeTonBalance(address);
+            
+            if (connectedWallet) {
+              connectedWallet.balance = gramBalance;
+              connectedWallet.gramBalance = gramBalance;
+              connectedWallet.tonBalance = tonBalance;
+            }
+            
+            updateCatalogBalance();
+            updateProfileBalance();
+            console.log('[GRAM] ═══ УСПЕШНО (tonapi.io) ═══');
+            return;
+          } else {
+            console.log('[GRAM] ⚠️ GRAM не найден среди токенов');
+          }
+        } else {
+          console.log('[GRAM] ⚠️ Нет токенов в ответе');
+        }
+      }
+    } catch (e) {
+      console.error('[GRAM] tonapi.io ошибка:', e);
+    }
+    
+    // МЕТОД 2: Используем toncenter API (работает с RAW адресами)
+    console.log('[GRAM] ───────────────────────────────────────────────');
+    console.log('[GRAM] МЕТОД 2: Запрос к toncenter');
     console.log('[GRAM] URL:', `https://toncenter.com/api/v3/jetton/wallets?owner_address=${address}&limit=100`);
     
     try {
@@ -234,7 +324,11 @@ async function fetchGramBalance(address) {
     
     // FALLBACK: Если ничего не нашли, показываем 0
     console.log('[GRAM] ───────────────────────────────────────────────');
-    console.log('[GRAM] ⚠️ FALLBACK: Токен не найден в кошельке');
+    console.log('[GRAM] ⚠️ FALLBACK: Токен не найден ни в одном API');
+    console.log('[GRAM] Это может означать:');
+    console.log('[GRAM] 1. В кошельке действительно нет GRAM токенов');
+    console.log('[GRAM] 2. GRAM называется по-другому в этом кошельке');
+    console.log('[GRAM] 3. Используется другой токен вместо GRAM');
     console.log('[GRAM] Устанавливаем gramBalance = 0');
     gramBalance = 0;
     
@@ -248,6 +342,10 @@ async function fetchGramBalance(address) {
       connectedWallet.tonBalance = tonBalance;
     }
     
+    console.log('[GRAM] ИТОГО:');
+    console.log('[GRAM] - gramBalance:', gramBalance, 'GRAM');
+    console.log('[GRAM] - tonBalance:', tonBalance, 'TON');
+    console.log('[GRAM] - gramPriceUsd:', gramPriceUsd, 'USD');
     console.log('[GRAM] Обновляем UI (fallback)...');
     updateCatalogBalance();
     updateProfileBalance();
